@@ -34,39 +34,27 @@ class convert:
             exp_file_dat (str): new file to write experimental data to (fwf format)
         """
         # get the experimental data into a useable format (from yml to csv)
-        # for freenergworkflows, want to save as lig, Ki
-        # experimental values (e.g. ic50/ki) for all ligands in our set.
+        # for conversion, need the values in IC50
 
         exp_file = validate.file_path(exp_file)
         exp_file_dat = validate.string(exp_file_dat)
 
-        with open(exp_file, "r") as file:
-            data = yaml.safe_load(file)  # loads as dictionary
+        # assume the temperature is 300
+        exper_raw_dict = convert._yml_into_exper_raw_dict(exp_file, 300, "IC50")
 
         with open(exp_file_dat, "w") as file:
             writer = csv.writer(file, delimiter=",")
-            writer.writerow(["ligand", "value", "error"])
+            writer.writerow(["ligand", "value" ]) #, "error"])
 
-            # the data needs to be IC50, uM
-            # am assuming that ki and IC50 are the same
-
-            for key in data.keys():  # write for each ligand that was in yaml file
-                if data[key]["measurement"]["unit"] == "uM":
-                    writer.writerow(
-                        [
-                            key,
-                            data[key]["measurement"]["value"],
-                            data[key]["measurement"]["error"],
-                        ]
-                    )
-                elif data[key]["measurement"]["unit"] == "nM":
-                    writer.writerow(
-                        [
-                            key,
-                            "{:.4f}".format(data[key]["measurement"]["value"] / 1000),
-                            data[key]["measurement"]["error"] / 1000,
-                        ]
-                    )
+            for key in exper_raw_dict.keys():  # write for each ligand that was in yaml file
+                # TODO the error is not converted by fwf so this will present an issue
+                writer.writerow(
+                    [
+                        key,
+                        exper_raw_dict[key][0],
+                        # exper_raw_dict[key][1],
+                    ]
+                )
 
     @staticmethod
     def convert_M_kcal(
@@ -75,7 +63,8 @@ class convert:
         """convert value into kcal/mol
 
         Args:
-            value (float): value
+            value (float): value, in M
+            err (float): error, in M
             temperature (int, optional): temperature of the simulation. Defaults to 300.
 
         Returns:
@@ -83,27 +72,30 @@ class convert:
         """
 
         # gas constant in kcal per Kelvin per mol, exp val is Ki converted into M
-        kcal_val = (R_kcalmol * temperature * np.log(value))  # value is /1 as the concentration of substrate, log result has no units, units from RT
+        # value is /1 as the concentration of substrate, log result has no units, units from RT
+        kcal_val = (R_kcalmol * temperature * np.log(value))
 
         # propagate the error
-        # given that y = A log(x)
-        # dy = A * (dy/dx) dx
-        # differentiating, dy = A ( dx / x ln(10) )
-        error =(err / (value * np.log(10)))
+        # if x = ln(a)
+        # errx = erra/a
+        error = (err / value)
         # A is RT
         kcal_err = abs(R_kcalmol * temperature * error)
 
         return kcal_val, kcal_err
 
+
+
     @staticmethod
-    def yml_into_exper_dict(
-        exp_file, temperature: Optional[Union[int, float]] = 300
+    def _yml_into_exper_raw_dict(
+        exp_file, temperature: Optional[Union[int, float]] = 300, format_type="Ki",
     ) -> dict:
         """convert yml file into experimental dictionary of values.
 
         Args:
             exp_file (str): yml file. Each key is a ligand, with a 'measurement' that has 'unit', 'value', 'error'. Unit in uM or nM.
             temperature (int, optional): Temperature to use during the conversion. Defaults to 300.
+            format_type(str): "Ki" or "IC50". Format of the raw data dict.
 
         Returns:
             dict: kcal/mol value for each ligand
@@ -119,11 +111,25 @@ class convert:
         for key in data.keys():  # write for each ligand that was in yaml file
             # check what type of data
             if data[key]["measurement"]["type"].lower().strip() == "ki":
-                # assuming concentration of substrate in the assay is 1, IC50 is approx Ki*2
-                factor = 1
-                pki_err_factor = 0.4
+                if format_type == "Ki":
+                    # assuming concentration of substrate in the assay is 1, IC50 is approx Ki*2
+                    factor = 1
+                elif format_type == "IC50":
+                    factor = 2
+                else:
+                    raise ValueError("format_type must be Ki or IC50")
+                
+                pki_err_factor = 0.44
+
             elif data[key]["measurement"]["type"].lower().strip() == "ic50":
-                factor = 0.5
+                if format_type == "Ki":
+                    # assuming concentration of substrate in the assay is 1, IC50 is approx Ki*2
+                    factor = 0.5
+                elif format_type == "IC50":
+                    factor = 1
+                else:
+                    raise ValueError("format_type must be Ki or IC50")
+                
                 pki_err_factor = 0.55
             else:
                 factor = 0.5
@@ -139,7 +145,7 @@ class convert:
             else:
                 logging.critical("only nM and uM recognised as units!")
                 magnitude = 1
-            
+
             value = data[key]["measurement"]["value"]
             error = data[key]["measurement"]["error"]
 
@@ -147,10 +153,13 @@ class convert:
             value = value * factor * magnitude
 
             if not error or error == -1:
-                # assume error of 0.4 log units for Ki and 0.55 log units for ic50, https://livecomsjournal.org/index.php/livecoms/article/view/v4i1e1497/1399
+                # assume error of 0.44 log units for Ki and 0.55 log units for ic50, https://livecomsjournal.org/index.php/livecoms/article/view/v4i1e1497/1399
                 # as pKi = -logKi
-                # error is sd * ln(10) * value
-                error = pki_err_factor * np.log(10) * value
+                # Ki = 10^-pKi
+                # the log is base 10 so for antilog error propagation: https://sites.science.oregonstate.edu/~gablek/CH361/Propagation.htm
+                # error is errKi = 2.303 * Ki * errpKi(the error factor)
+                error = 2.303 * value * pki_err_factor
+                # error = 2.303 pki_err_factor * np.log(10) * value
             else:
                 error = error * factor * magnitude
 
@@ -158,6 +167,24 @@ class convert:
                 value,
                 error,
             )
+
+        return exper_raw_dict
+
+    @staticmethod
+    def yml_into_exper_dict(
+        exp_file, temperature: Optional[Union[int, float]] = 300
+    ) -> dict:
+        """convert yml file into experimental dictionary of values.
+
+        Args:
+            exp_file (str): yml file. Each key is a ligand, with a 'measurement' that has 'unit', 'value', 'error'. Unit in uM or nM.
+            temperature (int, optional): Temperature to use during the conversion. Defaults to 300.
+
+        Returns:
+            dict: kcal/mol value for each ligand
+        """
+
+        exper_raw_dict = convert._yml_into_exper_raw_dict(exp_file, temperature)
 
         exper_val_dict = convert.exper_raw_dict_into_val_dict(
             exper_raw_dict, temperature
@@ -294,8 +321,10 @@ class convert:
                 exper_val_dict = validate.dictionary(exper_val)
             except:
                 validate.file_path(exper_val)
-                logging.info("input is a file, will convert this into a dict...")
-                logging.info("please check that the conversion of values is okay.")
+                logging.info(
+                    "input is a file, will convert this into a dict...")
+                logging.info(
+                    "please check that the conversion of values is okay.")
                 exper_val_dict = convert.yml_into_exper_dict(exper_val)
 
             add_exper_values = True
@@ -315,7 +344,8 @@ class convert:
                 # write in kcal/mol
                 for lig in exper_val_dict.keys():
                     writer.writerow(
-                        [lig, f"{exper_val_dict[lig][0]}", f"{exper_val_dict[lig][1]}"]
+                        [lig, f"{exper_val_dict[lig][0]}",
+                            f"{exper_val_dict[lig][1]}"]
                     )
 
             # second write the perturbation data
@@ -345,6 +375,11 @@ class convert:
                 comp_ddG = comp_diff_dict[key][0]
                 comp_err = comp_diff_dict[key][1]
 
+                if comp_err == 0:
+                    logging.error(
+                        f"when converting to the cinnanar file, the error for {key} in {output_file} is 0. This can create issues later for network wide analysis, so setting as 0.001.")
+                    comp_err = 0.0001
+
                 if not comp_ddG:
                     pass
                 elif math.isnan(comp_ddG):
@@ -353,12 +388,14 @@ class convert:
                     if perturbations:
                         pert = f"{lig_0}~{lig_1}"
                         if pert in perturbations:
-                            writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
+                            writer.writerow(
+                                [lig_0, lig_1, comp_ddG, comp_err, "0.0"])
                         else:
                             pass
 
                     else:
-                        writer.writerow([lig_0, lig_1, comp_ddG, comp_err, "0.0"])
+                        writer.writerow(
+                            [lig_0, lig_1, comp_ddG, comp_err, "0.0"])
 
     @staticmethod
     def _convert_html_mbarnet_into_dict(file):
@@ -370,8 +407,9 @@ class convert:
             import execjs
         except Exception as e:
             logging.critical(f"{e}")
-            logging.critical("cannot import for converting html mbarnet to dictionary.")
-        
+            logging.critical(
+                "cannot import for converting html mbarnet to dictionary.")
+
         file = validate.file_path(file)
 
         with open(file, "r") as file:
@@ -434,7 +472,7 @@ class convert:
         #         use_dict = perturbations_dict
         #     else:
         #         use_dict = ligands_dict
-            
+
         #     use_dict[key] = {}
         #     use_dict[key]["CONFE"] = gdata_dict[key]["CONFE"]["size"]
         #     use_dict[key]["AVGCC"] = gdata_dict[key]["AVGCC"]["size"]

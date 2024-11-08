@@ -28,7 +28,8 @@ class protocol:
                 is_file = True
             except Exception as e:
                 logging.error(e)
-                logging.error("Not recognised as file, trying to read as dictionary...")
+                logging.error(
+                    "Not recognised as file, trying to read as dictionary...")
                 is_file = False
 
             if not is_file:
@@ -46,9 +47,11 @@ class protocol:
             if not is_file and not is_dict:
                 try:
                     if protocol_type == "pipeline":
-                        prot = validate.pipeline_protocol(file, auto_validate=False)
+                        prot = validate.pipeline_protocol(
+                            file, auto_validate=False)
                     elif protocol_type == "analysis":
-                        prot = validate.analysis_protocol(file, auto_validate=False)
+                        prot = validate.analysis_protocol(
+                            file, auto_validate=False)
 
                     self._query_dict = prot.dictionary()
 
@@ -65,7 +68,8 @@ class protocol:
                     self._query_dict = {}
 
         else:
-            logging.info("no file or dict passed, using entirely default values...")
+            logging.info(
+                "no file or dict passed, using entirely default values...")
             # set the query dict as the default dict
             self._query_dict = self.default_dict()
 
@@ -406,7 +410,8 @@ class pipeline_protocol(protocol):
 
         if value:
             value = value.lower()
-            options_list = ["start", "middle", "both"]
+            # TODO currently not implemented later: "middle"
+            options_list = ["start", "both", "end"]
             if value not in options_list:
                 raise ValueError(f"fepprep option must be in {options_list}")
             self._query_dict["fepprep"] = value
@@ -598,7 +603,7 @@ class pipeline_protocol(protocol):
         """
 
         if value:
-            value = validate.integer(value)
+            value = validate.is_float(value)
             self._query_dict["sampling"] = value
             self._sampling = value
         else:
@@ -854,7 +859,10 @@ class pipeline_protocol(protocol):
             self._query_dict["hmr"] = value
             self._hmr = value
         else:
-            value = self._hmr
+            try:
+                value = self._hmr
+            except:
+                self._hmr = value
 
         return value
 
@@ -889,7 +897,8 @@ class pipeline_protocol(protocol):
                 try:
                     value = validate.is_float(value)
                 except:
-                    raise ValueError("hmr_factor must be 'auto' or a integer/float")
+                    raise ValueError(
+                        "hmr_factor must be 'auto' or a integer/float")
 
             self._hmr_factor = value
             self._query_dict["hmr factor"] = value
@@ -902,6 +911,7 @@ class pipeline_protocol(protocol):
     def timestep_overwrite(self, value: Optional[bool] = None) -> bool:
         """set whether the timestep in the protocol should be overwritten based on the HMR or return its value.
         If True, overwrite the timestep to 4 fs if HMR is applied or 2 fs if not.
+        If False, uses the provided timestep value (or the default for this, which is currently 2 fs)
 
         Args:
             value (boolean, optional): whether to overwrite the timestep. Defaults to None.
@@ -915,7 +925,10 @@ class pipeline_protocol(protocol):
             self._query_dict["timestep overwrite"] = value
             self._timestep_overwrite = value
         else:
-            value = self._timestep_overwrite
+            try:
+                value = self._timestep_overwrite
+            except:
+                self._timestep_overwrite = value
 
         # will overwrite the provided timestep based on default values
         if self._timestep_overwrite:
@@ -984,17 +997,18 @@ class pipeline_protocol(protocol):
                     self._query_dict["config options"] = value_dict
                     self._config_options = value_dict
                 except:
-                    logging.error(f"could not validate config options, {value}")
-                    value = self._config_dict()
-                    self._config_options = value
+                    logging.error(
+                        f"could not validate config options, {value}")
+                    value_dict = self._config_dict()
+                    self._config_options = value_dict
         else:
             try:
-                value = self._config_options
+                value_dict = self._config_options
             except:
-                value = self._config_dict()
-                self._config_options = value
+                value_dict = self._config_dict()
+                self._config_options = value_dict
 
-        return value
+        return value_dict
 
     def config_options_file(self, value: Optional[str] = None) -> str:
         if value:
@@ -1003,7 +1017,8 @@ class pipeline_protocol(protocol):
                 self._query_dict["config options file"] = value
                 self._config_options_file = value
             except:
-                logging.error(f"could not validate config options file path, {value}")
+                logging.error(
+                    f"could not validate config options file path, {value}")
                 value = None
                 self._config_options_file = value
         else:
@@ -1031,7 +1046,10 @@ class pipeline_protocol(protocol):
             self._query_dict["rerun"] = value
             self._rerun = value
         else:
-            value = self._rerun
+            try:
+                value = self._rerun
+            except:
+                self._rerun = value
 
         return value
 
@@ -1061,7 +1079,10 @@ class pipeline_protocol(protocol):
             self._query_dict["reverse"] = value
             self._reverse = value
         else:
-            value = self._reverse
+            try:
+                value = self._reverse
+            except:
+                self._reverse = value
 
         return value
 
@@ -1081,8 +1102,8 @@ class analysis_protocol(protocol):
             "save pickle": "True",
             "auto equilibration": "False",
             "statistical inefficiency": "False",
-            "truncate percentage": "0",
-            "truncate keep": "end",
+            "truncate lower": "0",
+            "truncate upper": "100",
             "mbar method": "None",  # robust or default
             "name": None,
             "kwargs": {},
@@ -1103,8 +1124,8 @@ class analysis_protocol(protocol):
         self.save_pickle(query_dict["save pickle"])
         self.auto_equilibration(query_dict["auto equilibration"])
         self.statistical_inefficiency(query_dict["statistical inefficiency"])
-        self.truncate_percentage(query_dict["truncate percentage"])
-        self.truncate_keep(query_dict["truncate keep"])
+        self.truncate_lower(query_dict["truncate lower"])
+        self.truncate_upper(query_dict["truncate upper"])
         self.mbar_method(query_dict["mbar method"])
         self.kwargs(query_dict["kwargs"])
         self.name(query_dict["name"])
@@ -1165,7 +1186,10 @@ class analysis_protocol(protocol):
             self._query_dict["check overlap"] = value
             self._check_overlap = value
         else:
-            value = self._check_overlap
+            try:
+                value = self._check_overlap
+            except:
+                self._check_overlap = value
 
     def try_pickle(self, value: Optional[bool] = None) -> bool:
         """set whether to try to find/use pickle files in the analysis protocol or return its value.
@@ -1255,48 +1279,6 @@ class analysis_protocol(protocol):
 
         return value
 
-    def truncate_percentage(self, value: Optional[int] = None) -> int:
-        """set how much percentage-wise to truncate the data by in the analysis protocol or return its value.
-
-        Args:
-            value (int, optional): how much to truncate. Defaults to None.
-
-        Returns:
-            int: truncate percentage
-        """
-
-        if value:
-            value = validate.integer(value)
-            self._query_dict["truncate percentage"] = value
-            self._truncate_percentage = value
-        else:
-            try:
-                value = self._truncate_percentage
-            except:
-                if value == 0:
-                    self._truncate_percentage = validate.integer(value)
-
-        return value
-
-    def truncate_keep(self, value: Optional[str] = None) -> str:
-        """set which part of the truncated to keep (start or end) in the analysis protocol or return its value.
-
-        Args:
-            value (str, optional): truncate keep. Defaults to None.
-
-        Returns:
-            str: truncate keep
-        """
-
-        if value:
-            value = validate.truncate_keep(value)
-            self._query_dict["truncate keep"] = value
-            self._truncate_keep = value
-        else:
-            value = self._truncate_keep
-
-        return value
-
     def mbar_method(self, value: Optional[str] = None) -> str:
         """set the mbar method for use with pymbar in the analysis protocol or return its value.
 
@@ -1316,5 +1298,51 @@ class analysis_protocol(protocol):
             except:
                 value = None
                 self._mbar_method = value
+
+        return value
+
+    def truncate_lower(self, value: Optional[str] = None) -> str:
+        """lower percentage of the data to truncate.
+
+        Args:
+            value (str, optional): truncate lower. Defaults to None.
+
+        Returns:
+            str: truncate lower
+        """
+
+        if value:
+            value = validate.integer(value)
+            self._query_dict["truncate lower"] = value
+            self._truncate_lower = value
+        else:
+            try:
+                value = self._truncate_lower
+            except:
+                value = "0"
+                self._truncate_lower = value
+
+        return value
+
+    def truncate_upper(self, value: Optional[str] = None) -> str:
+        """lower percentage of the data to truncate.
+
+        Args:
+            value (str, optional): truncate upper. Defaults to None.
+
+        Returns:
+            str: truncate upper
+        """
+
+        if value:
+            value = validate.integer(value)
+            self._query_dict["truncate upper"] = value
+            self._truncate_upper = value
+        else:
+            try:
+                value = self._truncate_upper
+            except:
+                value = "100"
+                self._truncate_upper = value
 
         return value

@@ -164,7 +164,8 @@ class fepprep:
                 "please add a system for bound with lig0 and bound with lig1 and merge these"
             )
 
-        self._pipeline_protocol = validate.pipeline_protocol(protocol, fepprep=True)
+        self._pipeline_protocol = validate.pipeline_protocol(
+            protocol, fepprep=True)
         # generate the BSS protocols from the pipeline protocol
         fepprep._generate_bss_protocols(self)
 
@@ -216,7 +217,8 @@ class fepprep:
         kwarg_dict = {"ALIGNTO": align_to}
 
         for key, value in kwargs.items():
-            kwarg_dict[key.upper().replace(" ", "").replace("_", "").strip()] = value
+            kwarg_dict[key.upper().replace(
+                " ", "").replace("_", "").strip()] = value
 
         logging.info(f"merging using {kwarg_dict} ...")
 
@@ -252,7 +254,8 @@ class fepprep:
             logging.error(
                 "could not merge with the existing protocol. Will try merging with the allow ring breaking and allow ring size change arguments set to True..."
             )
-            update_kwarg_dict = {"ALLOWRINGBREAKING": True, "ALLOWRINGSIZECHANGE": True}
+            update_kwarg_dict = {
+                "ALLOWRINGBREAKING": True, "ALLOWRINGSIZECHANGE": True}
             kwarg_dict.update(update_kwarg_dict)
             free_system = merge.merge_system(
                 self._free_system_0, self._free_system_1, **kwarg_dict
@@ -276,7 +279,7 @@ class fepprep:
         if protocol.engine() == "AMBER":
             # for amber, this will be 1/value to give 2 for the collision frequency in ps-1
             thermostat_time_constant = BSS.Types.Time(0.5, "picosecond")
-            eq_timestep = protocol.timestep()
+            eq_timestep = 1  # protocol.timestep()
         elif protocol.engine() == "GROMACS":
             # in gromacs this is the tau-t in ps
             thermostat_time_constant = BSS.Types.Time(2, "picosecond")
@@ -288,6 +291,7 @@ class fepprep:
                 steps=protocol.min_steps(),
             )
             # TODO: 2 fs timestep for equilibration?
+            logging.error("restraining heavy atoms in nvt!!")
             heat_protocol = BSS.Protocol.FreeEnergyEquilibration(
                 timestep=eq_timestep * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
@@ -298,6 +302,8 @@ class fepprep:
                 temperature_end=protocol.end_temperature()
                 * protocol.temperature_unit(),
                 restart_interval=restart_interval,
+                # restraint="heavy",
+                hmr=protocol.hmr(),
                 hmr_factor=protocol.hmr_factor(),
                 thermostat_time_constant=thermostat_time_constant,
             )
@@ -309,6 +315,7 @@ class fepprep:
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart=True,
                 restart_interval=restart_interval,
+                hmr=protocol.hmr(),
                 hmr_factor=protocol.hmr_factor(),
                 thermostat_time_constant=thermostat_time_constant,
             )
@@ -320,6 +327,7 @@ class fepprep:
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart=True,
                 restart_interval=restart_interval,
+                hmr=protocol.hmr(),
                 hmr_factor=protocol.hmr_factor(),
                 thermostat_time_constant=thermostat_time_constant,
             )
@@ -332,9 +340,11 @@ class fepprep:
                 timestep=protocol.timestep() * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
                 temperature=protocol.temperature() * protocol.temperature_unit(),
-                runtime=(protocol.eq_runtime() * 2) * protocol.eq_runtime_unit(),
+                runtime=(protocol.eq_runtime() * 2) *
+                protocol.eq_runtime_unit(),
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart_interval=restart_interval,
+                hmr=protocol.hmr(),
                 hmr_factor=protocol.hmr_factor(),
             )
             freenrg_protocol = BSS.Protocol.FreeEnergy(
@@ -344,6 +354,7 @@ class fepprep:
                 temperature=protocol.temperature() * protocol.temperature_unit(),
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart_interval=restart_interval,
+                hmr=protocol.hmr(),
                 hmr_factor=protocol.hmr_factor(),
             )
 
@@ -353,6 +364,7 @@ class fepprep:
         self._eq_protocol = eq_protocol
         self._freenrg_protocol = freenrg_protocol
 
+    # TODO currently not used
     def prep_system_middle(self, pmemd_path: str, work_dir: Optional[str] = None):
         """trying to prep the system at lambda 0.5 (not very robust currently)
 
@@ -426,12 +438,13 @@ class fepprep:
                             "gti_output": 1,  # output term by term detailed TI results
                             "gti_add_sc": 5,  # all interactions except vdw sc internal are scaled with lambda and not present in the dummy state
                             "gti_scale_beta": 1,  # new form of sc potential enabled
-                            "scalpha":0.5, # default for gti_scale_beta
-                            "scbeta":1.0, # default for gti_scale_beta
+                            "scalpha": 0.5,  # default for gti_scale_beta
+                            "scbeta": 1.0,  # default for gti_scale_beta
                             "gti_lam_sch": 1,  #
                             "gti_ele_sc": 1,  # smoothstep function used
                             "gti_vdw_sc": 1,  # smoothstep function used
-                            "gti_cut_sc": 2,  # smooth vdw (1) and then also elec (2)
+                            # smooth vdw (1) and then also elec (2)
+                            "gti_cut_sc": 2,
                             "gti_ele_exp": 2,
                             "gti_vdw_exp": 2,  # default value is 6
                         }
@@ -502,8 +515,11 @@ class fepprep:
                     "minimise": True,
                     "minimise maximum iterations": protocol.min_steps(),
                     "equilibrate": False,
+                    "coulomb power": 1, "shift delta": 1.0,
                 }
-                prod_extra_options = {"minimise": False, "equilibrate": False}
+                prod_extra_options = {"minimise": False, "equilibrate": False,
+                                      "coulomb power": 1, "shift delta": 1.0,
+                                      }
 
                 for key, value in protocol.config_options()["all"].items():
                     eq_extra_options[key] = value
@@ -577,11 +593,13 @@ class fepprep:
 
         # any pipeline kwargs overwrite this
         for key, value in self._pipeline_protocol.kwargs().items():
-            kwarg_dict[key.upper().replace(" ", "").replace("_", "").strip()] = value
+            kwarg_dict[key.upper().replace(
+                " ", "").replace("_", "").strip()] = value
 
         # any final passed arguments in the script overwrite this
         for key, value in kwargs.items():
-            kwarg_dict[key.upper().replace(" ", "").replace("_", "").strip()] = value
+            kwarg_dict[key.upper().replace(
+                " ", "").replace("_", "").strip()] = value
 
         if self._pipeline_protocol.fepprep() == "both":
             ligs = ["lig0", "lig1"]
@@ -622,14 +640,18 @@ class fepprep:
         else:
             if not self._merge_free_system or not self._merge_bound_system:
                 logging.info("no merged systems, merging....")
-                self.merge_systems(**kwarg_dict)
+                if self._pipeline_protocol.fepprep() == "start":
+                    self.merge_systems(**kwarg_dict)
+                elif self._pipeline_protocol.fepprep() == "end":
+                    self.merge_systems(align_to="lig1", **kwarg_dict)
             self._generate_folders(
                 self._merge_free_system, self._merge_bound_system, work_dir, rep=rep
             )
 
         # default folder is with no integer.
         # for the sake of analysis , doesnt matter as finds folders w names of leg
-        more_repeats = list(range(start_rep, self._pipeline_protocol.repeats()))
+        more_repeats = list(
+            range(start_rep, self._pipeline_protocol.repeats()))
 
         logging.info(
             f"there are {self._pipeline_protocol.repeats()} folder(s) being made for each leg..."

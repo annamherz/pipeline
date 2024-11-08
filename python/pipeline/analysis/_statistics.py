@@ -134,7 +134,7 @@ class stats_engines(plotting_engines):
         s = stats.bootstrap_statistic(
             x, y, xerr, yerr, nbootstrap=10000, statistic=statistic
         )
-        values = (s["mle"], s["stderr"])
+        values = (s["mle"], s["stderr"], [s['low'], s['high']])
         # string = f"{statistic}:   {s['mle']:.2f} [95%: {s['low']:.2f}, {s['high']:.2f}] " + "\n"
 
         return values
@@ -168,7 +168,6 @@ class stats_engines(plotting_engines):
 
         # get the x y values from the dictionaries, also validates pert val and engine
         x, y, xerr, yerr = self._get_x_y(pert_val, data_x, data_y, x, y, xerr, yerr)
-
         values = stats_engines.compute_stats(x, y, xerr, yerr, statistic)
 
         return values

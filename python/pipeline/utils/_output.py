@@ -1,9 +1,6 @@
 import os
 import shutil
 import subprocess
-import logging
-
-from typing import Union, Optional
 
 import MDAnalysis as mda
 import MDAnalysis.transformations as trans
@@ -11,7 +8,7 @@ import MDAnalysis.transformations as trans
 from ._validate import *
 
 
-def get_repeat_folders(work_dir: str) -> tuple:
+def get_repeat_folders(work_dir):
     """how many of each the free and bound repeat folders there are in work dir.
 
     Args:
@@ -50,7 +47,7 @@ def get_repeat_folders(work_dir: str) -> tuple:
     return b_folders, f_folders
 
 
-def add_header_simfile(trans_dir: str):
+def add_header_simfile(trans_dir):
     """Adds header to simfiles if failed to generate.
 
     Args:
@@ -96,10 +93,11 @@ def add_header_simfile(trans_dir: str):
 
             sim_okay = False
             if not sim_okay:
-                logging.info(f"will write header for simfiles in {direc}")
+                print(f"will write header for simfiles in {direc}")
                 try:
                     if not os.path.exists(f"{direc}/old_simfile.dat"):
-                        os.rename(f"{direc}/simfile.dat", f"{direc}/old_simfile.dat")
+                        os.rename(f"{direc}/simfile.dat",
+                                  f"{direc}/old_simfile.dat")
 
                     if not os.path.exists(f"{direc}/old_old_simfile.dat"):
                         os.rename(
@@ -140,7 +138,8 @@ def add_header_simfile(trans_dir: str):
                         .decode("utf-8")
                         .strip()
                     )
-                    final_step = float(last_line.strip().split(" ")[0].strip()) + 200
+                    final_step = float(
+                        last_line.strip().split(" ")[0].strip()) + 200
                     sim_time = final_step * timestep / 1000
                     extr_timestep = True
                 except:
@@ -194,7 +193,7 @@ def add_header_simfile(trans_dir: str):
 class extract:
     """class for extracting output data"""
 
-    def __init__(self, trans_dir: str, extract_dir: Optional[str] = None):
+    def __init__(self, trans_dir, extract_dir=None):
         self.trans_dir = validate.folder_path(trans_dir)
         # need to check that the trans directory contains outputs
         if not "outputs" in self.trans_dir:
@@ -213,7 +212,7 @@ class extract:
 
         # make directory
         extract_dir = validate.folder_path(extract_dir, create=True)
-        logging.info(f"using {extract_dir} for target file location as none was set.")
+        print(f"using {extract_dir} for target file location as none was set.")
 
         self.extract_dir = extract_dir
 
@@ -226,14 +225,13 @@ class extract:
         extract._extract_config(self.trans_dir, self.extract_dir)
 
     @staticmethod
-    def _extract_config(folder: str, extract_dir: str):
+    def _extract_config(folder, extract_dir):
         """extract sample config files used for run at lambda=0.0000.
 
         Args:
             folder (str): folder path to the folder to extract data from
             extract_dir (str): folder path to the extracted dir
         """
-
         dir_list = [dirs[0] for dirs in os.walk(folder)]
 
         for dirs in dir_list:
@@ -243,8 +241,14 @@ class extract:
                     f"{extract_dir}{dirs.split(f'{folder}')[1]}", create=True
                 )
                 if "min" in dirs:
-                    if "AMBER" in dirs:
-                        file_names = ["amber.cfg", "amber.prm7", "initial_amber.rst7"]
+                    if len([x for x in validate.engines() if x in dirs]) > 1:
+                        print(
+                            "There are too many engines found in the file path. will check for all output formats....")
+                        file_names = ["amber.cfg", "amber.prm7", "initial_amber.rst7",
+                                      "gromacs.mdp", "initial_gromacs.gro", "gromacs.top",]
+                    elif "AMBER" in dirs:
+                        file_names = ["amber.cfg",
+                                      "amber.prm7", "initial_amber.rst7"]
                     elif "GROMACS" in dirs:
                         file_names = [
                             "gromacs.mdp",
@@ -252,21 +256,31 @@ class extract:
                             "gromacs.top",
                         ]
                 elif "eq" in dirs:
-                    if "AMBER" in dirs:
+                    if len([x for x in validate.engines() if x in dirs]) > 1:
+                        print(
+                            "There are too many engines found in the file path. will check for all output formats....")
+                        file_names = ["amber.cfg", "gromacs.mdp",
+                                      "somd.cfg", "somd.prm7", "initial_somd.rst7"]
+                    elif "AMBER" in dirs:
                         file_names = ["amber.cfg"]
                     elif "GROMACS" in dirs:
                         file_names = ["gromacs.mdp"]
                     elif "SOMD" in dirs:
-                        file_names = ["somd.cfg", "somd.prm7", "initial_somd.rst7"]
+                        file_names = ["somd.cfg",
+                                      "somd.prm7", "initial_somd.rst7"]
                 else:
-                    if "AMBER" in dirs:
+                    if len([x for x in validate.engines() if x in dirs]) > 1:
+                        print(
+                            "There are too many engines found in the file path. will check for all output formats....")
+                        file_names = ["amber.cfg", "gromacs.mdp", "somd.cfg"]
+                    elif "AMBER" in dirs:
                         file_names = ["amber.cfg"]
                     elif "GROMACS" in dirs:
                         file_names = ["gromacs.mdp"]
                     elif "SOMD" in dirs:
                         file_names = ["somd.cfg"]
                 if not file_names:
-                    logging.info(
+                    print(
                         "no engine found in filepath, will try to extract each engine's input config file format..."
                     )
                     file_names = ["amber.cfg", "somd.cfg", "gromacs.mdp"]
@@ -275,7 +289,7 @@ class extract:
                     try:
                         shutil.copyfile(f"{dirs}/{file}", f"{new_dir}/{file}")
                     except:
-                        logging.error(
+                        print(
                             f"{dirs} does not have a recognised input file, {str(file)}."
                         )
 
@@ -288,7 +302,7 @@ class extract:
         extract._extract_output(self.trans_dir, self.extract_dir)
 
     @staticmethod
-    def _extract_output(folder: str, extract_dir: str):
+    def _extract_output(folder, extract_dir):
         """extract simulation output needed for the AFE analysis.
 
         Args:
@@ -310,7 +324,13 @@ class extract:
                                 f"{extract_dir}{dirs.split(f'{folder}')[1]}",
                                 create=True,
                             )
-                            if "AMBER" in dirs:
+                            # check if too many engines in the file path
+                            if len([x for x in validate.engines() if x in dirs]) > 1:
+                                print(
+                                    "There are too many engines found in the file path. will check for all output formats....")
+                                file_names = ["amber.out",
+                                              "gromacs.xvg", "simfile.dat"]
+                            elif "AMBER" in dirs:
                                 file_names = ["amber.out"]
                             elif "GROMACS" in dirs:
                                 file_names = ["gromacs.xvg"]
@@ -318,10 +338,11 @@ class extract:
                                 file_names = ["simfile.dat"]
                             # if cant find the engine in the file path try all
                             else:
-                                logging.info(
+                                print(
                                     "no engine found in filepath, will try to extract each engine's output format..."
                                 )
-                                file_names = ["amber.out", "gromacs.xvg", "simfile.dat"]
+                                file_names = ["amber.out",
+                                              "gromacs.xvg", "simfile.dat"]
 
                             for file in file_names:
                                 try:
@@ -329,11 +350,11 @@ class extract:
                                         f"{dirs}/{file}", f"{new_dir}/{file}"
                                     )
                                     if os.path.getsize(f"{new_dir}/{file}") == 0:
-                                        logging.error(
+                                        print(
                                             f"File extracting to '{new_dir}/{file}' is empty!"
                                         )
                                 except:
-                                    logging.error(
+                                    print(
                                         f"{dirs} does not have a recognised input file, {str(file)}."
                                     )
 
@@ -342,12 +363,7 @@ class extract:
                 "no directories were found to extract from! make sure there is not min/heat/eq in the main folder path as these will be excluded."
             )
 
-    def extract_frames(
-        self,
-        traj_lambdas: Optional[list] = None,
-        rmsd: Optional[bool] = True,
-        overwrite: bool = False,
-    ):
+    def extract_frames(self, traj_lambdas=None, rmsd=True, overwrite=False):
         """extract the rmsd and/or frames for certain lambda windows.
 
         Args:
@@ -370,7 +386,7 @@ class extract:
         if traj_lambdas:
             traj_lambdas = validate.is_list(traj_lambdas)
         else:
-            logging.info("no traj_lambdas provided, will not extract any frames.")
+            print("no traj_lambdas provided, will not extract any frames.")
             traj_lambdas = []
 
         # exclude pickle folder from list, only do bound and free legs
@@ -418,7 +434,7 @@ class extract:
                                 file_exists = False
 
                         if file_exists:
-                            logging.info(
+                            print(
                                 "traj extracted already exists, will NOT extract again."
                             )
                             return
@@ -426,14 +442,16 @@ class extract:
                     # create mda universe based on file type
                     if "SOMD" in direc:
                         # must be parm7 for mda
-                        shutil.copy(f"{direc}/somd.prm7", f"{direc}/somd.parm7")
+                        shutil.copy(f"{direc}/somd.prm7",
+                                    f"{direc}/somd.parm7")
                         coord_file = validate.file_path(f"{direc}/somd.parm7")
 
                         # combine traj files
                         traj_files = []
                         for file in os.listdir(direc):
                             if "dcd" in file:
-                                traj_files.append(validate.file_path(f"{direc}/{file}"))
+                                traj_files.append(
+                                    validate.file_path(f"{direc}/{file}"))
                         if not traj_files:
                             raise ValueError(
                                 "there are no dcd trajectory files for somd in this folder."
@@ -441,7 +459,8 @@ class extract:
 
                     elif "AMBER" in direc:
                         # must be parm7 for mda
-                        shutil.copy(f"{direc}/amber.prm7", f"{direc}/amber.parm7")
+                        shutil.copy(f"{direc}/amber.prm7",
+                                    f"{direc}/amber.parm7")
                         coord_file = validate.file_path(f"{direc}/amber.parm7")
 
                         traj_files = validate.file_path(f"{direc}/amber.nc")
@@ -468,7 +487,7 @@ class extract:
                     pass
 
     @staticmethod
-    def centre_molecule(universe: mda.Universe, selection: str):
+    def centre_molecule(universe, selection):
         """centre the molecule (eg either 'resname LIG' or 'protein') in the mda universe/
 
         Args:
@@ -494,7 +513,7 @@ class extract:
         return u
 
     @staticmethod
-    def _write_traj_frames(universe: mda.Universe, traj_extract_dir: str):
+    def _write_traj_frames(universe, traj_extract_dir):
         """write 5 evenly spaced trajectory frames from the universe. Start, three evenly spaced from the middle, end.
 
         Args:
@@ -505,7 +524,7 @@ class extract:
         write_dir = traj_extract_dir
         u = universe
 
-        logging.info("starting to write trajectory frames...")
+        print("starting to write trajectory frames...")
         timesteps = [u.trajectory.ts for ts in u.trajectory]
         timestep_freq = int(len(timesteps) / 4)
         # five frames - if 4 ns, this is every ns
@@ -522,10 +541,10 @@ class extract:
             with mda.Writer(f"{write_dir}/system_{str(time)}.pdb") as W:
                 W.write(u)
 
-        logging.info("finished writing 5 frames to pdb.")
+        print("finished writing 5 frames to pdb.")
 
     @staticmethod
-    def _rmsd_trajectory(universe: mda.Universe, traj_extract_dir: str):
+    def _rmsd_trajectory(universe, traj_extract_dir):
         """rmsd of the ligand (with name 'LIG') over the course of the trajectory
 
         Args:
@@ -543,7 +562,8 @@ class extract:
             u,
             ref,
             select="resname LIG",
-            groupselections=["resname LIG and resname LIG", "backbone and resname LIG"],
+            groupselections=["resname LIG and resname LIG",
+                             "backbone and resname LIG"],
         )
         R.run()
 
@@ -559,12 +579,12 @@ class extract:
         ax.set_ylabel(r"RMSD of ligand ($\AA$)")
         fig.savefig(f"{write_dir}/rmsd_ligand.png")
 
-        logging.info(
+        print(
             f"the maximum rmsd of the ligand is {max(rmsd[2])} and the minimum is {min(rmsd[2])}"
         )
 
     @staticmethod
-    def extract_output_all(main_dir: str, extract_dir: Optional[str] = None):
+    def extract_output_all(main_dir, extract_dir=None):
         """Extracts only the output files if an output directory is given.
 
         Args:

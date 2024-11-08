@@ -8,7 +8,9 @@ import logging
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 from PIL import Image, ImageOps
+from scipy.stats import norm
 
 from typing import Union, Optional
 
@@ -71,6 +73,7 @@ class network_graph:
         for lig in self.ligands:
             if self.ligands_folder:
                 img = self._ligand_image(lig)
+                img = f"{self.ligand_image_dir}/{lig}.png"
             else:
                 img = None
             graph.add_node(lig, label=lig, labelloc="t", image=img)
@@ -88,7 +91,14 @@ class network_graph:
 
         self.graph = graph
 
-    def draw_graph(self, file_dir: Optional[str] = None, title=None, edge_labels: str = True, figsize: tuple = None, networkx_layout_func = None):
+    def draw_graph(self, file_dir: Optional[str] = None,
+                   title=None,
+                   edge_labels: str = True,
+                   figsize: tuple = None,
+                   networkx_layout_func=None,
+                   layout_func_kwargs: dict ={},
+                   dot_graph: bool = False,
+                   ):
         """draw the network x graph.
 
         Args:
@@ -101,100 +111,116 @@ class network_graph:
         else:
             title = "Network"
 
-        # Plot the networkX graph. 
-        if networkx_layout_func:
-            func = networkx_layout_func
+        if dot_graph:
+            # Convert to a dot graph.
+            dot_graph = nx.drawing.nx_pydot.to_pydot(graph)
+
+            # Write to a PNG.
+            network_plot = f"{self.file_dir}/network_pydot.png"
+            dot_graph.write_png(network_plot)
+
         else:
-            func = nx.kamada_kawai_layout
-        pos = func(graph)  # circular_layout
 
-        # default fig size based on network size
-        if not figsize:
-            figsize = (graph.number_of_nodes() * 2, graph.number_of_nodes() * 2)
-        
-        fig, ax = plt.subplots(
-            figsize=figsize, dpi=300
-        )
-
-        if self.calc_pert_dict:
-            cmap_col = plt.cm.magma
-            edge_colours = [graph[u][v]["error"] for u, v in graph.edges]
-            edges, weights = zip(*nx.get_edge_attributes(graph, "error").items())
-            if edge_labels:
-                draw_edge_labels = True
+            # Plot the networkX graph.
+            if networkx_layout_func:
+                func = networkx_layout_func
             else:
+                func = nx.kamada_kawai_layout
+            pos = func(graph, **layout_func_kwargs)
+
+            # default fig size based on network size
+            if not figsize:
+                figsize = (graph.number_of_nodes() * 2,
+                        graph.number_of_nodes() * 2)
+
+            fig, ax = plt.subplots(
+                figsize=figsize, dpi=300*(math.ceil(graph.number_of_nodes()/10))
+            )
+
+            if self.calc_pert_dict:
+                cmap_col = plt.cm.magma
+                edge_colours = [graph[u][v]["error"] for u, v in graph.edges]
+                edges, weights = zip(
+                    *nx.get_edge_attributes(graph, "error").items())
+                if edge_labels:
+                    draw_edge_labels = True
+                else:
+                    draw_edge_labels = False
+            else:
+                cmap_col = None
+                weights = "black"
                 draw_edge_labels = False
-        else:
-            cmap_col = None
-            weights = "black"
-            
 
-        nx.draw(
-            graph,
-            pos,
-            edge_color=weights,
-            edge_cmap=cmap_col,
-            width=1,
-            linewidths=1,
-            node_size=2100,
-            node_color="navy",
-            font_size=15,
-            labels={node: node for node in graph.nodes()},
-            font_color="white",
-        )
-        if draw_edge_labels:
-            nx.draw_networkx_edge_labels(
-                graph, pos,
-                edge_labels={(u,v): format(graph[u][v]['value'],".2f") for u,v in graph.edges},
-                font_color='navy',
-                font_size=16,
-                label_pos=0.45
+            nx.draw(
+                graph,
+                pos,
+                edge_color=weights,
+                edge_cmap=cmap_col,
+                width=1,
+                linewidths=1,
+                node_size=2100,
+                node_color="navy",
+                font_size=15,
+                labels={node: node for node in graph.nodes()},
+                font_color="white",
             )
-            title = f"{title}\n ddG in kcal/mol"
+            if draw_edge_labels:
+                nx.draw_networkx_edge_labels(
+                    graph, pos,
+                    edge_labels={(u, v): format(
+                        graph[u][v]['value'], ".2f") for u, v in graph.edges},
+                    font_color='navy',
+                    font_size=16,
+                    label_pos=0.45
+                )
+                title = f"{title}\n ddG in kcal/mol"
 
-        plt.title(
-            f"{title}", fontdict={"fontsize": graph.number_of_nodes()}
-        )
-
-        if cmap_col:
-            sm = plt.cm.ScalarMappable(
-                cmap=cmap_col, norm=plt.Normalize(vmin=min(weights), vmax=max(weights))
+            plt.title(
+                f"{title}", fontdict={"fontsize": graph.number_of_nodes()}
             )
-            cbar = plt.colorbar(sm, shrink=0.5, location="bottom", aspect=50)
-            cbar.set_label(label="error (kcal/mol)", size=15)
-            cbar.ax.tick_params(labelsize=10)
 
-        trans = ax.transData.transform
-        trans2 = fig.transFigure.inverted().transform
-        piesize = 0.05  # this is the image size
-        p2 = piesize / 2.0
-        for n in graph:
-            xx, yy = trans(pos[n])  # figure coordinates
-            xa, ya = trans2((xx, yy))  # axes coordinates
-            a = plt.axes([xa - p2, ya - p2, piesize, piesize])
-            a.set_aspect("equal")
-            a.imshow(ImageOps.expand(graph.nodes[n]["image"], border=2, fill="black"))
-            a.set_title(f"{n}", y=0.85)
-            a.axis("off")
+            if cmap_col:
+                sm = plt.cm.ScalarMappable(
+                    cmap=cmap_col, norm=plt.Normalize(
+                        vmin=min(weights), vmax=max(weights))
+                )
+                cbar = plt.colorbar(sm, shrink=0.5, location="bottom", aspect=50)
+                cbar.set_label(label="error (kcal/mol)", size=15)
+                cbar.ax.tick_params(labelsize=10)
 
-        if self._save_image:
-            plt.savefig(f"{self.file_dir}/network.png", dpi=300)
-        if file_dir:
-            file_dir = validate.folder_path(file_dir, create=True)
-            plt.savefig(f"{file_dir}/network.png", dpi=300)
+            trans = ax.transData.transform
+            trans2 = fig.transFigure.inverted().transform
+            piesize = 0.05  # this is the image size
+            p2 = piesize / 2.0
+            for n in graph:
+                xx, yy = trans(pos[n])  # figure coordinates
+                xa, ya = trans2((xx, yy))  # axes coordinates
+                a = plt.axes([xa - p2, ya - p2, piesize, piesize])
+                a.set_aspect("equal")
+                a.imshow(ImageOps.expand(
+                    graph.nodes[n]["image"], border=2, fill="black"))
+                a.set_title(f"{n}", y=0.85)
+                a.axis("off")
 
-        return ax
+            if self._save_image:
+                plt.savefig(f"{self.file_dir}/network.png", dpi=300)
+            if file_dir:
+                file_dir = validate.folder_path(file_dir, create=True)
+                plt.savefig(f"{file_dir}/network.png", dpi=300)
+
+            return ax
 
     def _ligand_image(self, ligand: str):
         if not self.ligands_folder:
-            raise ValueError("please provide a ligands dir w the files inside.")
+            raise ValueError(
+                "please provide a ligands dir w the files inside.")
 
         m = Chem.SDMolSupplier(f"{self.ligands_folder}/{ligand}.sdf")[0]
         smi = Chem.MolToSmiles(m)
         m2 = Chem.MolFromSmiles(smi)
         img = Chem.Draw.MolToImage(m2)
         if self._save_image:
-            Chem.Draw.MolToFile(m, f"{self.ligand_image_dir}/{ligand}.png")
+            Chem.Draw.MolToFile(m2, f"{self.ligand_image_dir}/{ligand}.png")
         else:
             logging.info(
                 "as there is no output folder to save the network image, the ligand images will not be written."
@@ -211,7 +237,7 @@ class network_graph:
 
         return fig
 
-    def draw_all_ligands(self, file_dir: Optional[str] = None, figsize: tuple = (10,15)):
+    def draw_all_ligands(self, file_dir: Optional[str] = None, figsize: tuple = (10, 15)):
         """draw all the ligands in the network.
 
         Args:
@@ -226,7 +252,8 @@ class network_graph:
         """
 
         if not self.ligands_folder:
-            raise ValueError("please provide a ligands dir w the files inside.")
+            raise ValueError(
+                "please provide a ligands dir w the files inside.")
 
         len_ligs = len(self.ligands)
 
@@ -341,7 +368,8 @@ class network_graph:
                         )
                         break
 
-            cycles_dict.update({"_".join(cycle): (sum(cycle_val), sum(cycle_val_err))})
+            cycles_dict.update(
+                {"_".join(cycle): (sum(cycle_val), sum(cycle_val_err))})
 
         self.cycles_dict = cycles_dict
 
@@ -364,8 +392,10 @@ class network_graph:
         cycle_vals_not_nan = [abs(x) for x in cycle_vals if str(x) != "nan"]
         avg_cc = np.mean(cycle_vals_not_nan)
         std_cc = np.std(cycle_vals_not_nan)
+        se = std_cc / np.sqrt(len(cycle_vals_not_nan))
+        ci_cc = norm.interval(0.95, loc=avg_cc, scale=se)
 
-        return avg_cc, std_cc
+        return avg_cc, std_cc, ci_cc
 
     def add_weight(self, input_data: Union[dict, str], name: str = "weights"):
         """add weights to the network x graph for the edges and each perturbation.
@@ -418,11 +448,13 @@ class network_graph:
                 possible_paths = nx.all_simple_edge_paths(G, node_i, node_j)
                 sum_of_weighted_averaged_paths = sum(
                     [
-                        np.average([G.get_edge_data(*edge)["weight"] for edge in path])
+                        np.average([G.get_edge_data(*edge)["weight"]
+                                   for edge in path])
                         for path in possible_paths
                     ]
                 )
-                paths_per_nodepair_combination.append(sum_of_weighted_averaged_paths)
+                paths_per_nodepair_combination.append(
+                    sum_of_weighted_averaged_paths)
 
         # no of possible paths between each two nodes on average
         return np.average(paths_per_nodepair_combination)

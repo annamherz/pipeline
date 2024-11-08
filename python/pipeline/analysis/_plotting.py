@@ -39,7 +39,8 @@ class plotting_engines:
             self._analysis_obj_into_format()
             self._analysis_obj_dicts_into_format()
         else:
-            raise ValueError("please provide an analysis object to be plotted for.")
+            raise ValueError(
+                "please provide an analysis object to be plotted for.")
 
         # place to write results to
         if not results_folder:
@@ -47,13 +48,15 @@ class plotting_engines:
             self.results_folder = self._analysis_object.results_folder
             self.graph_folder = self._analysis_object.graph_dir
         else:
-            self.results_folder = validate.folder_path(results_folder, create=True)
+            self.results_folder = validate.folder_path(
+                results_folder, create=True)
             self.graph_folder = validate.folder_path(
                 f"{results_folder}/graphs", create=True
             )
 
         # set the colours
-        self.colours = set_colours(other_results_names=self.other_results_names)
+        self.colours = set_colours(
+            other_results_names=self.other_results_names)
 
         # convert the dictionaries into dataframes for plotting
         self._analysis_dicts_to_df()
@@ -230,28 +233,28 @@ class plotting_engines:
                 values_dict[eng]["ligs"] = pert_lig[1]
                 # put results into values dict
                 values_dict[eng]["pert_results"] = self.calc_pert_dict[eng]
-                if self.calc_bound_dict[eng]:
-                    values_dict[eng]["bound_results"] = self.calc_bound_dict[eng]
-                else:
-                    values_dict[eng]["bound_results"] = {
-                        x: (None, None) for x in self.calc_pert_dict[eng]
-                    }
-                if self.calc_free_dict[eng]:
-                    values_dict[eng]["free_results"] = self.calc_free_dict[eng]
-                else:
-                    values_dict[eng]["free_results"] = {
-                        x: (None, None) for x in self.calc_pert_dict[eng]
-                    }
-
                 values_dict[eng]["val_results"] = self.calc_val_dict[eng]
+                
+                try:
+                    logging.error("trhing free bound")
+                    values_dict[eng]["bound_results"] = self.calc_bound_dict[eng]
+                    values_dict[eng]["free_results"] = self.calc_free_dict[eng]
+                except: # if added later there may not be bound and free results
+                    logging.error("didnt free bound")
+                    values_dict[eng]["bound_results"] = {
+                        x: (None, None) for x in pert_lig[0]
+                    }
+                    values_dict[eng]["free_results"] = {
+                        x: (None, None) for x in pert_lig[0]
+                    }
 
             except Exception as e:
                 values_dict[eng]["perts"] = [None]
                 values_dict[eng]["ligs"] = [None]
                 values_dict[eng]["pert_results"] = [None]
+                values_dict[eng]["val_results"] = [None]
                 values_dict[eng]["bound_results"] = [None]
                 values_dict[eng]["free_results"] = [None]
-                values_dict[eng]["val_results"] = [None]
                 logging.error(e)
                 logging.error(
                     f"could not convert {eng} values for plotting. None will be used. Was earlier analysis okay?"
@@ -368,7 +371,8 @@ class plotting_engines:
                 freenrg_dict[value] = [x_ddG, x_err, y_ddG, y_err]
             except Exception as e:
                 logging.error(e)
-                logging.error(f"{value} not in both dicts, {x_name} and {y_name}")
+                logging.error(
+                    f"{value} not in both dicts, {x_name} and {y_name}")
 
         freenrg_df = pd.DataFrame(
             freenrg_dict,
@@ -539,15 +543,17 @@ class plotting_engines:
     def _parse_kwargs_graphs(self, graph: str = None, **kwargs):
         graph = validate.string(graph).upper()
         if graph not in ["BAR", "SCATTER", "OUTLIER"]:
-            raise ValueError(f"graph argument must be bar, scatter or outlier.")
+            raise ValueError(
+                f"graph argument must be bar, scatter or outlier.")
 
         # default
         y_label = None
         x_label = None
+        suptitle = None
         title = None
         include_key = True
         save_fig_location = None
-        include_x_error = False
+        include_x_error = True
         include_y_error = True
 
         # check kwargs incase there is plotting info
@@ -557,6 +563,8 @@ class plotting_engines:
                 y_label = value
             if key == "XLABEL":
                 x_label = value
+            if key == "SUPTITLE":
+                suptitle = value
             if key == "TITLE":
                 title = value
             if key == "KEY":
@@ -571,6 +579,7 @@ class plotting_engines:
         return (
             y_label,
             x_label,
+            suptitle,
             title,
             include_key,
             save_fig_location,
@@ -619,6 +628,7 @@ class plotting_engines:
         (
             y_label,
             x_label,
+            suptitle,
             title,
             include_key,
             save_fig_location,
@@ -688,7 +698,8 @@ class plotting_engines:
         else:
             title = f"Freenrg for {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
 
-        plt.title(title, fontsize=20)
+        plt.suptitle(suptitle, fontsize=20)
+        plt.title(title, fontsize=14)
 
         if y_label:
             y_label = y_label
@@ -776,6 +787,7 @@ class plotting_engines:
         (
             y_label,
             x_label,
+            suptitle,
             title,
             include_key,
             save_fig_location,
@@ -797,7 +809,8 @@ class plotting_engines:
             ].dropna()
 
             # prune df to only have perturbations considered
-            freenrg_df_plotting = self._prune_perturbations(freenrg_df_plotting, values)
+            freenrg_df_plotting = self._prune_perturbations(
+                freenrg_df_plotting, values)
 
             x = freenrg_df_plotting[f"freenrg_{x_name}"]
             y = freenrg_df_plotting["freenrg_calc"]
@@ -817,7 +830,8 @@ class plotting_engines:
                 mue_values = abs(x - y)
 
                 # find the n ligand names that are outliers.
-                outlier_names = mue_values.nlargest(no_outliers).index.values.tolist()
+                outlier_names = mue_values.nlargest(
+                    no_outliers).index.values.tolist()
                 logging.info(f"outlier names for {y_name} are {outlier_names}")
 
                 # construct a list of labels to annotate the scatterplot with.
@@ -858,9 +872,11 @@ class plotting_engines:
                     plt.annotate(
                         txt,
                         (
-                            freenrg_df_plotting[f"freenrg_{x_name}"].values.tolist()[i]
+                            freenrg_df_plotting[f"freenrg_{x_name}"].values.tolist()[
+                                i]
                             + 0.1,  # x coords
-                            freenrg_df_plotting["freenrg_calc"].values.tolist()[i]
+                            freenrg_df_plotting["freenrg_calc"].values.tolist()[
+                                i]
                             + 0.1,
                         ),  # y coords
                         size=15,
@@ -921,7 +937,8 @@ class plotting_engines:
             else:
                 title = f"Computed vs {x_name}\nfor {self.file_ext.replace('_',',')}, {self.net_ext.replace('_',',')}"
 
-        plt.title(title, fontsize=20)
+        plt.suptitle(suptitle, fontsize=20)
+        plt.title(title, fontsize=14)
 
         if y_label:
             y_label = y_label
@@ -1115,7 +1132,8 @@ class plotting_histogram(plotting_engines):
             except:
                 pass
         else:
-            raise ValueError("please provide an analysis object to be plotted for.")
+            raise ValueError(
+                "please provide an analysis object to be plotted for.")
 
         # place to write results to
         if not results_folder:
@@ -1123,12 +1141,14 @@ class plotting_histogram(plotting_engines):
             self.results_folder = self._analysis_object.results_folder
             self.graph_folder = self._analysis_object.graph_dir
         else:
-            self.results_folder = validate.folder_path(results_folder, create=True)
+            self.results_folder = validate.folder_path(
+                results_folder, create=True)
             self.graph_folder = validate.folder_path(
                 f"{results_folder}/graphs", create=True
             )
         # set the colours
-        self.colours = set_colours(other_results_names=self.other_results_names)
+        self.colours = set_colours(
+            other_results_names=self.other_results_names)
 
         # set the dictionary for histograms
         self._files_into_error_lists()
@@ -1190,9 +1210,12 @@ class plotting_histogram(plotting_engines):
 
         # Fit a normal distribution to the data, mean and standard deviation
         mu, std = norm.fit(x)
+        se = std / np.sqrt(len(x))  # standard error
+        ci = norm.interval(0.95, loc=mu, scale=se)  # confidence interval
 
         # plot histogram
-        plt.hist(x, bins=no_bins, density=True, alpha=0.7, color=col, edgecolor="grey")
+        plt.hist(x, bins=no_bins, density=True,
+                 alpha=0.7, color=col, edgecolor="grey")
 
         # Plot the PDF.
         xmin, xmax = plt.xlim()
@@ -1201,7 +1224,7 @@ class plotting_histogram(plotting_engines):
 
         plt.plot(x, y, "--", linewidth=2, color=self.colours["experimental"])
 
-        self.best_fit_dict[type_error][name] = ((x, y), mu, std)
+        self.best_fit_dict[type_error][name] = ((x, y), mu, std, ci)
 
         # plot
         plt.xlabel("Error (kcal/mol)")
@@ -1241,7 +1264,7 @@ class plotting_histogram(plotting_engines):
                 color=col,
             )
             lines += plt.plot(0, 0, c=col, label=name)
-            mu_std_string += f"\n{name} : mu = {self.best_fit_dict[type_error][name][1]:.3f} , std = {self.best_fit_dict[type_error][name][2]:.3f}"
+            mu_std_string += f"\n{name} : mu = {self.best_fit_dict[type_error][name][1]:.3f} , std = {self.best_fit_dict[type_error][name][2]:.3f}, 95% CI = ({self.best_fit_dict[type_error][name][3][0]:.3f}, {self.best_fit_dict[type_error][name][3][1]:.3f})"
 
         labels = [l.get_label() for l in lines]
         plt.legend(lines, labels, loc="upper right")

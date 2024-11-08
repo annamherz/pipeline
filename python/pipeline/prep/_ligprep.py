@@ -121,7 +121,8 @@ class ligprep:
 
         nmols = mol_solvated.nMolecules()
 
-        logging.info(f"box dimensions for {box_edges} {box_edges_unit} {box_type} are:")
+        logging.info(
+            f"box dimensions for {box_edges} {box_edges_unit} {box_type} are:")
         logging.info(f"box_min : {box_min}")
         logging.info(f"box_max : {box_max}")
         logging.info(f"box_size : {box_size}")
@@ -267,7 +268,7 @@ def nvt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
         #    restart=True,
         **args,
     )
-    # NVT no restraints
+    # NVT no restraints # TODO remove?
     protocol_nvt = func(
         runtime=200 * BSS.Units.Time.picosecond,
         # temperature_start=0 * BSS.Units.Temperature.kelvin,
@@ -405,13 +406,15 @@ def minimise_equilibrate_leg(
     protocol_nvt_sol, protocol_nvt_heavy, protocol_nvt = nvt_prots(lig_fep)
 
     # NPTs
-    protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt = npt_prots(lig_fep)
+    protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt = npt_prots(
+        lig_fep)
 
     protocol_nvt_sol.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     protocol_nvt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     protocol_nvt.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     protocol_npt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
-    protocol_npt_heavy_lighter.setTimeStep(timestep * BSS.Units.Time.femtosecond)
+    protocol_npt_heavy_lighter.setTimeStep(
+        timestep * BSS.Units.Time.femtosecond)
     protocol_npt.setTimeStep(timestep * BSS.Units.Time.femtosecond)
 
     # run all the protocols
@@ -456,7 +459,8 @@ def minimise_equilibrate_leg(
 
     if lig_fep == "fepprep":
         logging.info("minimising...")
-        minimised1 = run_process(system_solvated, protocol_min_rest, engine, pmemd)
+        minimised1 = run_process(
+            system_solvated, protocol_min_rest, engine, pmemd)
         minimised2 = run_process(minimised1, protocol_min, engine, pmemd)
         logging.info("equilibrating NVT...")
         equil_nvt = run_process(minimised2, protocol_nvt, engine, pmemd)

@@ -21,6 +21,9 @@ def write_vals_file(
 ):
     val_dict = validate.dictionary(val_dict)
 
+    if not method:
+        method = "None"
+
     with open(f"{file_path}.csv", "w") as file:
         writer = csv.writer(file)
         writer.writerow(["ligand", "freenrg", "error", "engine", "analysis", "method"])
@@ -53,6 +56,11 @@ def write_analysis_file(analysis, results_dir: str, method=None):
             analysis.freenrg
         ),  # need as string so can compare to existing entries sometimes
         str(analysis.error),
+        str(
+            analysis.lower_ci
+        ),  # need as string so can compare to existing entries sometimes
+        str(analysis.upper_ci),
+        str(analysis._confidence_interval),
         analysis.engine,
         analysis.file_extension,
         method,
@@ -67,7 +75,7 @@ def write_analysis_file(analysis, results_dir: str, method=None):
         if os.path.getsize(final_summary_file) == 0:
             logging.info(f"Starting {final_summary_file} file.")
             writer.writerow(
-                ["lig_0", "lig_1", "freenrg", "error", "engine", "analysis", "method"]
+                ["lig_0", "lig_1", "freenrg", "error", "lower_ci", "upper_ci", "CI", "engine", "analysis", "method"]
             )
 
     with open(final_summary_file, "r") as freenrg_readfile:
@@ -88,8 +96,7 @@ def write_analysis_file(analysis, results_dir: str, method=None):
         with open(final_summary_file, "a") as freenrg_writefile:
             writer = csv.writer(freenrg_writefile)
             logging.info(
-                f"Writing results. Average free energy of binding is {str(analysis.freenrg)} "
-                + f"and the error is {str(analysis.error)} for {analysis.perturbation}, {analysis.engine}."
+                f"Writing results. Average free energy of binding is {str(analysis.freenrg)} and the error is {str(analysis.error)} [{str(analysis.lower_ci)}, {str(analysis.upper_ci)}, {analysis._confidence_interval*100}%] for {analysis.perturbation}, {analysis.engine}."
             )
             writer.writerow(data_point_avg)
 
@@ -353,7 +360,7 @@ def write_modified_results_files(
                 pert = f"{row['lig_0']}~{row['lig_1']}"
                 if pert in perturbations and row["engine"].strip() in engines:
                     if name:
-                        if name.lower() == row["method"].strip().lower():
+                        if name.lower() == str(row["method"]).strip().lower():
                             pass
                         else:
                             continue
@@ -364,9 +371,18 @@ def write_modified_results_files(
                         ana_str = "not specified"
 
                     try:
-                        method_str = row["method"]
+                        method_str = str(row["method"])
                     except:
+                        method_str = False
+                    if not method_str:
                         method_str = "None"
+                        logging.error("not method")
+                    elif method_str == "nan":
+                        method_str = "None"
+                        logging.error("was nan string method")
+                    else:
+                        logging.error("it was not None or nan")
+                        pass                   
 
                     # write the row
                     writer.writerow(

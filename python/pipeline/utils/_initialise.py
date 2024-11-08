@@ -162,7 +162,8 @@ class initialise_pipeline:
 
             ligands_dict[lig_name] = lig
 
-        print(f"there were {len(ligands_dict.keys())} ligands found. These are:\n")
+        print(
+            f"there were {len(ligands_dict.keys())} ligands found. These are:\n")
         for lig in ligands_dict.keys():
             print(lig)
 
@@ -199,7 +200,8 @@ class initialise_pipeline:
                 "The file name should not be changed usually as then it's not compatible with later scripts."
             )
             file_name = validate.string(file_name)
-            validate.folder_path(("/").join(file_name.split("/")[:-1]), create=True)
+            validate.folder_path(
+                ("/").join(file_name.split("/")[:-1]), create=True)
 
         ligands_dict = initialise_pipeline._setup_ligands(
             self._ligands_folder, file_name
@@ -223,7 +225,8 @@ class initialise_pipeline:
 
             # write ligands file again as updted
             write_ligands(
-                list(self.ligands_dict.keys()), f"{self._exec_folder}/ligands.dat"
+                list(self.ligands_dict.keys()
+                     ), f"{self._exec_folder}/ligands.dat"
             )
 
         else:
@@ -285,7 +288,8 @@ class initialise_pipeline:
         )
 
         self.pert_network_dict = pert_network_dict
-        self.perturbations = [f"{key[0]}~{key[1]}" for key in pert_network_dict.keys()]
+        self.perturbations = [
+            f"{key[0]}~{key[1]}" for key in pert_network_dict.keys()]
 
         self._is_network_setup = True
         self.write_network()
@@ -345,7 +349,8 @@ class initialise_pipeline:
         """
 
         self.protocol.reverse(reverse)
-        self.protocol.rewrite_protocol(file_path=f"{self.exec_folder()}/protocol.dat")
+        self.protocol.rewrite_protocol(
+            file_path=f"{self.exec_folder()}/protocol.dat")
 
     def draw_network(self, folder: Optional[str] = None):
         """draw the network.
@@ -361,7 +366,8 @@ class initialise_pipeline:
             print("please setup network first")
             return
 
-        graph = network_graph(list(self.ligands_dict.keys()), self.perturbations)
+        graph = network_graph(
+            list(self.ligands_dict.keys()), self.perturbations)
         graph.draw_graph(file_dir=folder)
 
     def setup_protocols(
@@ -376,11 +382,13 @@ class initialise_pipeline:
 
         # setup the protocol, write the file, and add to class object
         protocol = pipeline_protocol(protocol_dictionary, auto_validate=True)
-        protocol.rewrite_protocol(file_path=f"{self.exec_folder()}/protocol.dat")
+        protocol.rewrite_protocol(
+            file_path=f"{self.exec_folder()}/protocol.dat")
         self.protocol = protocol
 
         # create an analysis protocol
-        ana_protocol = analysis_protocol(ana_protocol_dictionary, auto_validate=True)
+        ana_protocol = analysis_protocol(
+            ana_protocol_dictionary, auto_validate=True)
         ana_protocol.rewrite_protocol(
             file_path=f"{self.exec_folder()}/analysis_protocol.dat"
         )
@@ -394,7 +402,8 @@ class initialise_pipeline:
         """
 
         self.protocol = validate.pipeline_protocol(protocol)
-        self.protocol.rewrite_protocol(file_path=f"{self.exec_folder()}/protocol.dat")
+        self.protocol.rewrite_protocol(
+            file_path=f"{self.exec_folder()}/protocol.dat")
 
     def add_analysis_protocol(self, protocol: analysis_protocol):
         """add an analysis protocol object.
@@ -503,6 +512,7 @@ source $scripts_dir/extract_execution_model_bash.sh
 ###########
 
 echo "The folder for all these runs is $MAINDIRECTORY"
+echo "The date is $(date)"
 echo ${{lig_array[@]}}
 echo ${{trans_array[@]}}
 echo ${{eng_array[@]}}
