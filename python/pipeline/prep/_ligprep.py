@@ -250,7 +250,7 @@ def nvt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
     # NVT restraining all non solvent atoms
     protocol_nvt_sol = func(
         runtime=400 * BSS.Units.Time.picosecond,
-        temperature_start=0 * BSS.Units.Temperature.kelvin,
+        temperature_start=10 * BSS.Units.Temperature.kelvin,
         temperature_end=temperature * BSS.Units.Temperature.kelvin,
         restraint="all",
         timestep=1 * BSS.Units.Time.femtosecond,
@@ -259,25 +259,24 @@ def nvt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
         **args,
     )
 
-    # NVT restraining all backbone/heavy atoms
-    protocol_nvt_heavy = func(
-        runtime=200 * BSS.Units.Time.picosecond,
-        temperature=temperature * BSS.Units.Temperature.kelvin,
-        restraint="heavy",
-        force_constant=25,
-        #    restart=True,
-        **args,
-    )
-    # NVT no restraints # TODO remove?
-    protocol_nvt = func(
-        runtime=200 * BSS.Units.Time.picosecond,
-        # temperature_start=0 * BSS.Units.Temperature.kelvin,
-        temperature=temperature * BSS.Units.Temperature.kelvin,  # temperature
-        #  restart=True,
-        **args,
-    )
+    # # NVT restraining all backbone/heavy atoms
+    # protocol_nvt_heavy = func(
+    #     runtime=200 * BSS.Units.Time.picosecond,
+    #     temperature=temperature * BSS.Units.Temperature.kelvin,
+    #     restraint="heavy",
+    #     force_constant=25,
+    #     #    restart=True,
+    #     **args,
+    # )
+    # # NVT no restraints
+    # protocol_nvt = func(
+    #     runtime=200 * BSS.Units.Time.picosecond,
+    #     temperature=temperature * BSS.Units.Temperature.kelvin,  # temperature
+    #     #  restart=True,
+    #     **args,
+    # )
 
-    return protocol_nvt_sol, protocol_nvt_heavy, protocol_nvt
+    return protocol_nvt_sol #, protocol_nvt_heavy, protocol_nvt
 
 
 def npt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
@@ -326,7 +325,7 @@ def npt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
     )
     # NPT no restraints
     protocol_npt = func(
-        runtime=400 * BSS.Units.Time.picosecond,
+        runtime=800 * BSS.Units.Time.picosecond,
         pressure=1 * BSS.Units.Pressure.atm,
         temperature=temperature * BSS.Units.Temperature.kelvin,
         restart=False,
@@ -403,15 +402,16 @@ def minimise_equilibrate_leg(
     protocol_min_rest, protocol_min = min_prots(lig_fep)
 
     # NVTs
-    protocol_nvt_sol, protocol_nvt_heavy, protocol_nvt = nvt_prots(lig_fep)
+    # protocol_nvt_sol, protocol_nvt_heavy, protocol_nvt = nvt_prots(lig_fep)
+    protocol_nvt_sol = nvt_prots(lig_fep)
 
     # NPTs
     protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt = npt_prots(
         lig_fep)
 
     protocol_nvt_sol.setTimeStep(timestep * BSS.Units.Time.femtosecond)
-    protocol_nvt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
-    protocol_nvt.setTimeStep(timestep * BSS.Units.Time.femtosecond)
+    # protocol_nvt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
+    # protocol_nvt.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     protocol_npt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     protocol_npt_heavy_lighter.setTimeStep(
         timestep * BSS.Units.Time.femtosecond)
@@ -463,7 +463,7 @@ def minimise_equilibrate_leg(
             system_solvated, protocol_min_rest, engine, pmemd)
         minimised2 = run_process(minimised1, protocol_min, engine, pmemd)
         logging.info("equilibrating NVT...")
-        equil_nvt = run_process(minimised2, protocol_nvt, engine, pmemd)
+        equil_nvt = run_process(minimised2, protocol_nvt_sol, engine, pmemd)
         logging.info("equilibrating NPT...")
         sys_equil_fin = run_process(equil_nvt, protocol_npt, engine, pmemd)
 

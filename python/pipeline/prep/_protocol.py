@@ -273,7 +273,7 @@ class pipeline_protocol(protocol):
             "repeats": "1",
             "trajectories": "None",
             "protein forcefield": "ff14SB",
-            "start temperature": "0",
+            "start temperature": "10",
             "end temperature": "300",
             "temperature": "300",
             "temperature unit": "kelvin",
@@ -687,7 +687,7 @@ class pipeline_protocol(protocol):
                 value = self._start_temperature
             except:
                 # if it is the default start temperature, it is zero
-                value = int(0)
+                value = int(10)
                 self._start_temperature = value
 
         return value

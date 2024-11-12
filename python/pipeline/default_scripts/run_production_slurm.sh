@@ -81,19 +81,19 @@ if [ $2 = "GROMACS" ]; then
 cp min/lambda_$lam/gromacs.gro min/lambda_$lam/initial_gromacs.gro
 
 echo "min"
-gmx grompp -maxwarn 1 -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/initial_gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
+gmx23 grompp -maxwarn 1 -f min/lambda_$lam/gromacs.mdp -c min/lambda_$lam/initial_gromacs.gro -p min/lambda_$lam/gromacs.top -o min/lambda_$lam/gromacs.tpr
+gmx23 mdrun -ntmpi 1 -deffnm min/lambda_$lam/gromacs ;
 
 echo "heat"
-gmx grompp -maxwarn 1 -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
+gmx23 grompp -maxwarn 1 -f heat/lambda_$lam/gromacs.mdp -c min/lambda_$lam/gromacs.gro -p heat/lambda_$lam/gromacs.top -o heat/lambda_$lam/gromacs.tpr
+gmx23 mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 
 echo "eq"
-gmx grompp -maxwarn 1 -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
+gmx23 grompp -maxwarn 1 -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
+gmx23 mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
 echo "prod"
-gmx grompp -maxwarn 1 -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
-gmx mdrun -ntmpi 1 -deffnm lambda_$lam/gromacs ;
+gmx23 grompp -maxwarn 1 -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
+gmx23 mdrun -ntmpi 1 -deffnm lambda_$lam/gromacs ;
 
 # delete simulation data 
 if [[ $keep_traj == "None" ]]; then

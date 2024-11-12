@@ -222,9 +222,10 @@ class network_graph:
         if self._save_image:
             Chem.Draw.MolToFile(m2, f"{self.ligand_image_dir}/{ligand}.png")
         else:
-            logging.info(
-                "as there is no output folder to save the network image, the ligand images will not be written."
-            )
+            # logging.info(
+            #     "as there is no output folder to save the network image, the ligand images will not be written."
+            # )
+            pass
 
         return img
 

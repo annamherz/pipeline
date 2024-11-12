@@ -276,22 +276,21 @@ class fepprep:
 
         restart_interval = 10000
 
+        eq_timestep = 2  # protocol.timestep()
+
         if protocol.engine() == "AMBER":
             # for amber, this will be 1/value to give 2 for the collision frequency in ps-1
             thermostat_time_constant = BSS.Types.Time(0.5, "picosecond")
-            eq_timestep = 1  # protocol.timestep()
         elif protocol.engine() == "GROMACS":
             # in gromacs this is the tau-t in ps
             thermostat_time_constant = BSS.Types.Time(2, "picosecond")
-            eq_timestep = protocol.timestep()
 
         if protocol.engine() == "AMBER" or protocol.engine() == "GROMACS":
             min_protocol = BSS.Protocol.FreeEnergyMinimisation(
                 num_lam=protocol.num_lambda(),
                 steps=protocol.min_steps(),
             )
-            # TODO: 2 fs timestep for equilibration?
-            logging.error("restraining heavy atoms in nvt!!")
+
             heat_protocol = BSS.Protocol.FreeEnergyEquilibration(
                 timestep=eq_timestep * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
@@ -337,7 +336,7 @@ class fepprep:
             heat_protocol = None
 
             eq_protocol = BSS.Protocol.FreeEnergy(
-                timestep=protocol.timestep() * protocol.timestep_unit(),
+                timestep=eq_timestep * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
                 temperature=protocol.temperature() * protocol.temperature_unit(),
                 runtime=(protocol.eq_runtime() * 2) *

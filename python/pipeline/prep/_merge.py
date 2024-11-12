@@ -32,7 +32,7 @@ class merge:
         allow_ring_breaking = False
         allow_ring_size_change = False
         align_to = "LIG0"
-        scoring_function = "rmsd_align"
+        scoring_function = "rmsd_flex_align"
         mapping = None
         inv_mapping = None
 
@@ -227,7 +227,7 @@ class merge:
         prune_perturbed_constraints = None
         prune_crossing_constraints = None
         prune_atom_types = None
-        scoring_function = "rmsd_align"
+        scoring_function = "rmsd_flex_align"
         prematch = {}
 
         for key, value in kwargs.items():

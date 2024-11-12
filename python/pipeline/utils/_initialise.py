@@ -370,6 +370,22 @@ class initialise_pipeline:
             list(self.ligands_dict.keys()), self.perturbations)
         graph.draw_graph(file_dir=folder)
 
+    def draw_ligand(self, ligand: str = None):
+        """draw the network.
+
+        Args:
+            folder (str, optional): folder path if want to save the image. Defaults to None, image will not be saved.
+        """
+
+        if not folder:
+            folder = self.exec_folder()
+        
+        ligand = validate.string(ligand)
+
+        graph = network_graph(
+            list(self.ligands_dict.keys()), self.perturbations)
+        graph.draw_ligand(ligand)
+
     def setup_protocols(
         self, protocol_dictionary: dict = None, ana_protocol_dictionary: dict = None
     ):

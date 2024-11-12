@@ -12,6 +12,9 @@ from pipeline.analysis import *
 
 
 def analyse_results(main_dir, experimental_file):
+    """simple analysis of the entire pipeline.
+    """
+
     # choose location for the files
     net_file = f"{main_dir}/execution_model/network.dat"
     ana_file = f"{main_dir}/execution_model/analysis_protocol.dat"
@@ -98,7 +101,7 @@ def main():
         "--main_folder",
         type=str,
         default=None,
-        help="main folder path to create for all the runs",
+        help="main folder for the pipeline.",
     )
     parser.add_argument(
         "-ef",

@@ -78,6 +78,7 @@ main folder
  |_ outputs_extracted
     |_ ENGINE ....
     |_ results
+    |_ analysis
  |_ scripts
 
-The results can then be computed using the analyse_pipeline.py, but it is better to use the notebook (analysis_notebook.ipynb).
+The results can then be computed using the analyse_pipeline.py, but it is better to use the notebook (analysis_notebook.ipynb). This includes some examples of analyses that can be carried out, but are not exhaustive.

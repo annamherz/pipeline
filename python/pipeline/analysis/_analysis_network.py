@@ -1805,7 +1805,7 @@ class analysis_network:
         
         if not self.spert_results_dict:
             raise EnvironmentError(
-                f"please run 'calculate_convergence' first with the main_dir set."
+                f"please run 'compute_convergence' first with the main_dir set."
             )
 
         else:
