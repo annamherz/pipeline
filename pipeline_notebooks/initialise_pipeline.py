@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 from pipeline.utils import *
-
+import pandas as pd
 
 def ask_things():
     lig_ff = str(
@@ -144,35 +144,47 @@ def main():
     else:
         pass
 
-    pl.setup_network()
 
-    rem_perts = str(
+    net_file_path = str(
         input(
-            "do you want to remove any perturbations? Please list all perts to remove (name as above), seperated by a comma: "
+            "do you want to generate a network or pass a network file? Please enter a file location, else leave blank: "
         )
     ).strip()
-    if rem_perts:
-        rem_perts = [pert.strip() for pert in rem_perts.split(",")]
-        for pert in rem_perts:
-            pl.remove_perturbation(pert)
+    if os.path.exists(net_file_path):
+        df = pd.read_csv(net_file_path)
+        perturbations = list(df["perturbation"])
+        for pert in perturbations:
+            pl.add_perturbation(pert)
     else:
-        pass
+        pl.setup_network()
 
-    add_perts = str(
-        input(
-            "do you want to add any perturbations? Please list all perts to add (lig0~lig1), seperated by a comma: "
-        )
-    ).strip()
-    if add_perts:
-        add_perts = [pert.strip() for pert in rem_perts.split(",")]
-        for pert in add_perts:
-            pl.remove_perturbation(pert)
-    else:
-        pass
+        rem_perts = str(
+            input(
+                "do you want to remove any perturbations? Please list all perts to remove (name as above), seperated by a comma: "
+            )
+        ).strip()
+        if rem_perts:
+            rem_perts = [pert.strip() for pert in rem_perts.split(",")]
+            for pert in rem_perts:
+                pl.remove_perturbation(pert)
+        else:
+            pass
+
+        add_perts = str(
+            input(
+                "do you want to add any perturbations? Please list all perts to add (lig0~lig1), seperated by a comma: "
+            )
+        ).strip()
+        if add_perts:
+            add_perts = [pert.strip() for pert in rem_perts.split(",")]
+            for pert in add_perts:
+                pl.remove_perturbation(pert)
+        else:
+            pass
 
     run_reverse = str(
         input(
-            "do you want to also run the perturbations in reverse? Please input True/False: "
+            "do you want to also run the perturbations in reverse? (allowed: True, False. Default: False): "
         )
     ).strip()
     if run_reverse:

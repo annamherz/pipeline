@@ -34,7 +34,6 @@ class initialise_pipeline:
         self.analysis_protocol = None
 
         self._is_ligands_setup = False
-        self._is_network_setup = False
 
     def ligands_folder(self, folder_path: str = None) -> str:
         """set the folder that contains the ligand files if passed, else state the current ligands folder.
@@ -253,7 +252,7 @@ class initialise_pipeline:
 
         transformations, lomap_scores = BSS.Align.generateNetwork(
             list(ligands_dict.values()),
-            plot_network=False,
+            plot_network=True,
             names=ligand_names,
             work_dir=f"{folder}/visualise_network",
             links_file=links_file,
@@ -291,7 +290,6 @@ class initialise_pipeline:
         self.perturbations = [
             f"{key[0]}~{key[1]}" for key in pert_network_dict.keys()]
 
-        self._is_network_setup = True
         self.write_network()
 
     def remove_perturbation(self, pert: str):
@@ -301,17 +299,14 @@ class initialise_pipeline:
             pert (str): name of the perturbation.
         """
 
-        if self._is_network_setup:
-            if pert in self.perturbations:
-                self.perturbations.remove(pert)
-                del self.pert_network_dict[
-                    (f"{pert.split('~')[0]}", f"{pert.split('~')[1]}")
-                ]
+        if pert in self.perturbations:
+            self.perturbations.remove(pert)
+            del self.pert_network_dict[
+                (f"{pert.split('~')[0]}", f"{pert.split('~')[1]}")
+            ]
 
-            self.write_network()
+        self.write_network()
 
-        else:
-            print("please setup network first before removing any perturbations")
 
     def add_perturbation(self, pert: str, links_file: Optional[str] = None):
         """add a perturbation from the network for the pipeline. Can use a links file for the score.
@@ -321,25 +316,22 @@ class initialise_pipeline:
             links_file (str, optional): links file to use instead of LOMAP when generating the network. Defaults to None.
         """
 
-        if self._is_network_setup:
-            lig0 = f"{pert.split('~')[0]}"
-            lig1 = f"{pert.split('~')[1]}"
+        lig0 = f"{pert.split('~')[0]}"
+        lig1 = f"{pert.split('~')[1]}"
 
-            # regenerate the network just for that perturbation
-            single_transformation, single_lomap_score = BSS.Align.generateNetwork(
-                [self.ligands_dict[lig0], self.ligands_dict[lig1]],
-                names=[lig0, lig1],
-                plot_network=False,
-                links_file=links_file,
-            )
+        # regenerate the network just for that perturbation
+        single_transformation, single_lomap_score = BSS.Align.generateNetwork(
+            [self.ligands_dict[lig0], self.ligands_dict[lig1]],
+            names=[lig0, lig1],
+            plot_network=False,
+            links_file=links_file,
+        )
 
-            self.pert_network_dict[(lig0, lig1)] = single_lomap_score[0]
-            self.perturbations.append(pert)
+        self.pert_network_dict[(lig0, lig1)] = single_lomap_score[0]
+        self.perturbations.append(pert)
 
-            self.write_network()
+        self.write_network()
 
-        else:
-            print("please setup network first before adding any perturbations")
 
     def run_reverse(self, reverse: bool):
         """whether to also run the network in the reverse direction. Important for writing the network file.
@@ -361,10 +353,6 @@ class initialise_pipeline:
 
         if not folder:
             folder = self.exec_folder()
-
-        if not self._is_network_setup:
-            print("please setup network first")
-            return
 
         graph = network_graph(
             list(self.ligands_dict.keys()), self.perturbations)
@@ -440,16 +428,13 @@ class initialise_pipeline:
             file_path (str, optional): file path to write the file to. Defaults to None, will then write to the execution model.
         """
 
-        if self._is_network_setup:
-            if not file_path:
-                file_path = f"{self.exec_folder()}/network.dat"
-            _write_network(self.pert_network_dict, self.protocol, file_path)
-            write_lomap_scores(
-                self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
-            )
+        if not file_path:
+            file_path = f"{self.exec_folder()}/network.dat"
+        _write_network(self.pert_network_dict, self.protocol, file_path)
+        write_lomap_scores(
+            self.pert_network_dict, f"{self.exec_folder()}/network_scores.dat"
+        )
 
-        else:
-            print("please setup network first before writing the network file.")
 
     def add_source_file(self, file: str):
         """source file that has info for modules, conda paths, MD engines, etc.
