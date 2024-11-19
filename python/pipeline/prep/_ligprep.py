@@ -256,6 +256,7 @@ def nvt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
         timestep=1 * BSS.Units.Time.femtosecond,
         force_constant=100,
         restart=False,
+        thermostat_time_constant=0.5 * BSS.Units.Time.picosecond, # so collision freq 2ps^-1
         **args,
     )
 
@@ -311,6 +312,7 @@ def npt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
         restraint="all",
         force_constant=50,
         restart=False,
+        thermostat_time_constant=0.5 * BSS.Units.Time.picosecond,  # so collision freq 2ps^-1
         **args,
     )
     # NPT with gradual release of restraints
@@ -321,6 +323,7 @@ def npt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
         restraint="heavy",
         force_constant=10,
         restart=False,
+        thermostat_time_constant=0.5 * BSS.Units.Time.picosecond,  # so collision freq 2ps^-1
         **args,
     )
     # NPT no restraints
@@ -329,6 +332,7 @@ def npt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
         pressure=1 * BSS.Units.Pressure.atm,
         temperature=temperature * BSS.Units.Temperature.kelvin,
         restart=False,
+        thermostat_time_constant=0.5 * BSS.Units.Time.picosecond,  # so collision freq 2ps^-1
         **args,
     )
 
@@ -409,7 +413,8 @@ def minimise_equilibrate_leg(
     protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt = npt_prots(
         lig_fep)
 
-    protocol_nvt_sol.setTimeStep(timestep * BSS.Units.Time.femtosecond)
+    ## dont set NVT, keep at 1 fs
+    # protocol_nvt_sol.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     # protocol_nvt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     # protocol_nvt.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     protocol_npt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)

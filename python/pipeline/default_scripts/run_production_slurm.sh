@@ -49,7 +49,7 @@ echo "Lambda is $lam"
 # sed -i '5 a\   gti_add_sc=5,' min/lambda_$lam/amber.cfg
 # sed -i '5 a\   gti_add_sc=5,' heat/lambda_$lam/amber.cfg
 # sed -i '5 a\   gti_add_sc=5,' eq/lambda_$lam/amber.cfg
-# sed -i '5 a\   gti_add_sc=5,' lambda_$lam/amber.cfg
+# sed -i '5 a\   gti_add_sc=5,' prod/lambda_$lam/amber.cfg
 
 # run the runs based on which engine
 if [ $2 = "AMBER" ]; then
@@ -65,13 +65,13 @@ echo "heat"
 echo "eq"
     pmemd.cuda -i eq/lambda_$lam/amber.cfg -c heat/lambda_$lam/amber.rst7 -ref heat/lambda_$lam/amber.rst7 -p eq/lambda_$lam/amber.prm7 -O -o eq/lambda_$lam/amber.out -inf eq/lambda_$lam/amber.info -e eq/lambda_$lam/amber.en -r eq/lambda_$lam/amber.rst7 -x eq/lambda_$lam/amber.nc -l eq/lambda_$lam/amber.log ;
 echo "prod"
-    pmemd.cuda -i lambda_$lam/amber.cfg -c eq/lambda_$lam/amber.rst7 -ref eq/lambda_$lam/amber.rst7 -p lambda_$lam/amber.prm7 -O -o lambda_$lam/amber.out -inf lambda_$lam/amber.info -e lambda_$lam/amber.en -r lambda_$lam/amber.rst7 -x lambda_$lam/amber.nc -l lambda_$lam/amber.log ; # -AllowSmallBox ;
+    pmemd.cuda -i prod/lambda_$lam/amber.cfg -c eq/lambda_$lam/amber.rst7 -ref eq/lambda_$lam/amber.rst7 -p prod/lambda_$lam/amber.prm7 -O -o prod/lambda_$lam/amber.out -inf prod/lambda_$lam/amber.info -e prod/lambda_$lam/amber.en -r prod/lambda_$lam/amber.rst7 -x prod/lambda_$lam/amber.nc -l prod/lambda_$lam/amber.log ; # -AllowSmallBox ;
 
 # delete simulation data 
 if [[ $keep_traj == "None" ]]; then
     echo "Removing all trajectories..."
     rm min/lambda_$lam/*.nc heat/lambda_$lam/*.nc eq/lambda_$lam/*.nc
-    rm lambda_$lam/*.nc
+    rm prod/lambda_$lam/*.nc
 fi
 
 fi
@@ -92,14 +92,14 @@ echo "eq"
 gmx23 grompp -maxwarn 1 -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
 gmx23 mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
 echo "prod"
-gmx23 grompp -maxwarn 1 -f lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o lambda_$lam/gromacs.tpr
-gmx23 mdrun -ntmpi 1 -deffnm lambda_$lam/gromacs ;
+gmx23 grompp -maxwarn 1 -f prod/lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p prod/lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o prod/lambda_$lam/gromacs.tpr
+gmx23 mdrun -ntmpi 1 -deffnm prod/lambda_$lam/gromacs ;
 
 # delete simulation data 
 if [[ $keep_traj == "None" ]]; then
     echo "Removing all trajectories..."
     rm min/lambda_$lam/*.trr heat/lambda_$lam/*.trr eq/lambda_$lam/*trr
-    rm lambda_$lam/*.trr
+    rm prod/lambda_$lam/*.trr
 fi
 
 fi
@@ -114,12 +114,12 @@ somd-freenrg -c somd.rst7 -t somd.prm7 -m somd.pert -C somd.cfg -p CUDA
 cd $repeat_dir
 #copy the files over for restart
 echo "copying restart files for production..."
-cp eq/lambda_$lam/sim_restart.s3 lambda_$lam/sim_restart.s3
-cp eq/lambda_$lam/sim_restart.s3.previous lambda_$lam/sim_restart.s3.previous
-cp eq/lambda_$lam/SYSTEM.s3 lambda_$lam/SYSTEM.s3
+cp eq/lambda_$lam/sim_restart.s3 prod/lambda_$lam/sim_restart.s3
+cp eq/lambda_$lam/sim_restart.s3.previous prod/lambda_$lam/sim_restart.s3.previous
+cp eq/lambda_$lam/SYSTEM.s3 prod/lambda_$lam/SYSTEM.s3
 
 echo "prod"
-cd lambda_$lam
+cd prod/lambda_$lam
 sed '/gpu/d' -i somd.cfg
 somd-freenrg -c somd.rst7 -t somd.prm7 -m somd.pert -C somd.cfg -p CUDA
 cd $repeat_dir
@@ -128,7 +128,7 @@ cd $repeat_dir
 if [[ $keep_traj == "None" ]]; then
     echo "Removing all trajectories..."
     rm eq/lambda_$lam/*.dcd eq/lambda_$lam/*.s3* eq/lambda_$lam/latest*
-    rm lambda_$lam/*.dcd lambda_$lam/*.s3* lambda_$lam/latest*
+    rm prod/lambda_$lam/*.dcd prod/lambda_$lam/*.s3* prod/lambda_$lam/latest*
 fi
 
 fi

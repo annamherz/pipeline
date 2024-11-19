@@ -130,11 +130,11 @@ class network_graph:
 
             # default fig size based on network size
             if not figsize:
-                figsize = (graph.number_of_nodes() * 2,
-                        graph.number_of_nodes() * 2)
+                figsize = (graph.number_of_nodes(),# * 2,
+                        graph.number_of_nodes())# * 2)
 
             fig, ax = plt.subplots(
-                figsize=figsize, dpi=300*(math.ceil(graph.number_of_nodes()/10))
+                figsize=figsize, dpi=30*(math.ceil(graph.number_of_nodes()/100))
             )
 
             if self.calc_pert_dict:

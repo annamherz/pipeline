@@ -14,6 +14,7 @@ except:
 from ..utils import *
 from ._merge import *
 from ._ligprep import *
+from ._protocol import *
 
 from typing import Optional
 from pytest import approx
@@ -24,33 +25,37 @@ hydrogen_amu = proton_mass / (physical_constants["atomic mass constant"][0])
 
 
 def check_hmr(
-    system: BSS._SireWrappers.System, protocol: BSS.Protocol, engine: str
+    system: BSS._SireWrappers.System, protocol: pipeline_protocol
 ) -> BSS._SireWrappers.System:
     # from bss code
 
     system = validate.system(system)
-    protocol = validate.bss_protocol(protocol)
-    engine = validate.engine(engine)
+    protocol = validate.pipeline_protocol(protocol)
+    engine = protocol.engine()
     property_map = {}
 
     # HMR check
     # by default, if the timestep is greater than 4 fs this should be true.
-    if protocol.getHmr():
+    if protocol.hmr():
         # Set the expected HMR factor.
-        hmr_factor = protocol.getHmrFactor()
-        if hmr_factor == "auto":
-            if engine == "AMBER" or engine == "GROMACS":
+        hmr_factor = protocol.hmr_factor()
+        
+        if engine == "AMBER" or engine == "GROMACS":
+            if hmr_factor == "auto":
                 hmr_factor = 3
+            else:
+                pass # existing hmr factor
         # SOMD factor set during relative from the protocol.
 
         # Extract the molecules to which HMR applies.
         # set auto based on engine
-        if protocol.getHmrWater() == "auto" or protocol.getHmrWater() == False:
+        repartition_water = False
+        if repartition_water == False:
             water = "no"
             # water_mols = system.getWaterMolecules()
             # molecules = system - water_mols
             molecules = system.search("not water", property_map)
-        elif protocol.getHmrWater() == True:
+        elif repartition_water == True:
             water = "yes"
             molecules = self._system.getMolecules()
 
@@ -141,7 +146,7 @@ class fepprep:
         self,
         free_system: Optional[BSS._SireWrappers.System] = None,
         bound_system: Optional[BSS._SireWrappers.System] = None,
-        protocol: Optional[str] = None,  # TODO fix
+        protocol: Optional[pipeline_protocol] = None,
     ):
         # instantiate the class with the system and pipeline_protocol
         if free_system:
@@ -224,23 +229,19 @@ class fepprep:
 
         self._free_system_0 = check_hmr(
             self._free_system_0,
-            self._freenrg_protocol,
-            self._pipeline_protocol.engine(),
+            self._pipeline_protocol
         )
         self._free_system_1 = check_hmr(
             self._free_system_1,
-            self._freenrg_protocol,
-            self._pipeline_protocol.engine(),
+            self._pipeline_protocol,
         )
         self._bound_system_0 = check_hmr(
             self._bound_system_0,
-            self._freenrg_protocol,
-            self._pipeline_protocol.engine(),
+            self._pipeline_protocol,
         )
         self._bound_system_1 = check_hmr(
             self._bound_system_1,
-            self._freenrg_protocol,
-            self._pipeline_protocol.engine(),
+            self._pipeline_protocol,
         )
 
         try:
@@ -276,8 +277,6 @@ class fepprep:
 
         restart_interval = 10000
 
-        eq_timestep = 2  # protocol.timestep()
-
         if protocol.engine() == "AMBER":
             # for amber, this will be 1/value to give 2 for the collision frequency in ps-1
             thermostat_time_constant = BSS.Types.Time(0.5, "picosecond")
@@ -292,7 +291,7 @@ class fepprep:
             )
 
             heat_protocol = BSS.Protocol.FreeEnergyEquilibration(
-                timestep=eq_timestep * protocol.timestep_unit(),
+                timestep=protocol.eq_timestep() * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
                 runtime=protocol.eq_runtime() * protocol.eq_runtime_unit(),
                 pressure=None,
@@ -302,20 +301,16 @@ class fepprep:
                 * protocol.temperature_unit(),
                 restart_interval=restart_interval,
                 # restraint="heavy",
-                hmr=protocol.hmr(),
-                hmr_factor=protocol.hmr_factor(),
                 thermostat_time_constant=thermostat_time_constant,
             )
             eq_protocol = BSS.Protocol.FreeEnergyEquilibration(
-                timestep=eq_timestep * protocol.timestep_unit(),
+                timestep=protocol.eq_timestep() * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
                 runtime=protocol.eq_runtime() * protocol.eq_runtime_unit(),
                 temperature=protocol.temperature() * protocol.temperature_unit(),
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart=True,
                 restart_interval=restart_interval,
-                hmr=protocol.hmr(),
-                hmr_factor=protocol.hmr_factor(),
                 thermostat_time_constant=thermostat_time_constant,
             )
             freenrg_protocol = BSS.Protocol.FreeEnergyProduction(
@@ -326,8 +321,6 @@ class fepprep:
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart=True,
                 restart_interval=restart_interval,
-                hmr=protocol.hmr(),
-                hmr_factor=protocol.hmr_factor(),
                 thermostat_time_constant=thermostat_time_constant,
             )
 
@@ -336,15 +329,13 @@ class fepprep:
             heat_protocol = None
 
             eq_protocol = BSS.Protocol.FreeEnergy(
-                timestep=eq_timestep * protocol.timestep_unit(),
+                timestep=protocol.eq_timestep() * protocol.timestep_unit(),
                 num_lam=protocol.num_lambda(),
                 temperature=protocol.temperature() * protocol.temperature_unit(),
                 runtime=(protocol.eq_runtime() * 2) *
                 protocol.eq_runtime_unit(),
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart_interval=restart_interval,
-                hmr=protocol.hmr(),
-                hmr_factor=protocol.hmr_factor(),
             )
             freenrg_protocol = BSS.Protocol.FreeEnergy(
                 timestep=protocol.timestep() * protocol.timestep_unit(),
@@ -353,8 +344,19 @@ class fepprep:
                 temperature=protocol.temperature() * protocol.temperature_unit(),
                 pressure=protocol.pressure() * protocol.pressure_unit(),
                 restart_interval=restart_interval,
-                hmr=protocol.hmr(),
-                hmr_factor=protocol.hmr_factor(),
+            )
+
+        if protocol.engine() == "GROMACS":
+            logging.info("using no heating for gromacs")
+            heat_protocol = BSS.Protocol.FreeEnergyEquilibration(
+                timestep=eq_timestep * protocol.timestep_unit(),
+                num_lam=protocol.num_lambda(),
+                runtime=protocol.eq_runtime() * protocol.eq_runtime_unit(),
+                pressure=None,
+                temperature=protocol.temperature() * protocol.temperature_unit(),
+                restart_interval=restart_interval,
+                # restraint="heavy",
+                thermostat_time_constant=thermostat_time_constant,
             )
 
         # set the new protocols to self as well
@@ -363,7 +365,7 @@ class fepprep:
         self._eq_protocol = eq_protocol
         self._freenrg_protocol = freenrg_protocol
 
-    # TODO currently not used
+    ## currently not used
     def prep_system_middle(self, pmemd_path: str, work_dir: Optional[str] = None):
         """trying to prep the system at lambda 0.5 (not very robust currently)
 
@@ -422,10 +424,16 @@ class fepprep:
             # set up for each the bound and the free leg
             for leg, system in zip(["bound", "free"], [system_bound, system_free]):
                 if protocol.engine() == "GROMACS":
-                    min_extra_options = {}
-                    heat_extra_options = {}
-                    eq_extra_options = {}
-                    prod_extra_options = {}
+                    gromacs_dict = {
+                        "rlist": "0.8",
+                        "rvdw": "0.8",
+                        "rcoulomb": "0.8",
+                    }
+
+                    min_extra_options = gromacs_dict.copy()
+                    heat_extra_options = gromacs_dict.copy()
+                    eq_extra_options = gromacs_dict.copy()
+                    prod_extra_options = gromacs_dict.copy()
 
                 elif protocol.engine() == "AMBER":
                     if amber_version > 20:
@@ -446,6 +454,8 @@ class fepprep:
                             "gti_cut_sc": 2,
                             "gti_ele_exp": 2,
                             "gti_vdw_exp": 2,  # default value is 6
+                            "cut": "10.0",
+                            "iwrap": 0,
                         }
                     else:
                         amber_dict = {}
@@ -453,6 +463,8 @@ class fepprep:
                     heat_extra_options = amber_dict.copy()
                     eq_extra_options = amber_dict.copy()
                     prod_extra_options = amber_dict.copy()
+                    prod_extra_options["iwrap"] = 1
+                    eq_extra_options["barostat"] = 2  
 
                 for key, value in protocol.config_options()["all"].items():
                     min_extra_options[key] = value
@@ -502,7 +514,7 @@ class fepprep:
                     system,
                     freenrg_protocol,
                     engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_{rep}",
+                    work_dir=f"{work_dir}/{leg}_{rep}/prod",
                     extra_options=prod_extra_options,
                     ignore_warnings=True,
                     explicit_dummies=True,  # set True for AMBER, does not affect the other engines
@@ -515,10 +527,22 @@ class fepprep:
                     "minimise maximum iterations": protocol.min_steps(),
                     "equilibrate": False,
                     "coulomb power": 1, "shift delta": 1.0,
+                    "cutoff distance": "12 angstrom",
+                    "integrator_type": "langevinmiddle", # as eq is 2 fs, want to use the same as for prod
                 }
                 prod_extra_options = {"minimise": False, "equilibrate": False,
                                       "coulomb power": 1, "shift delta": 1.0,
+                                      "cutoff distance": "12 angstrom",
                                       }
+
+                # hmr factor 
+                if protocol.hmr():
+                    if protocol.hmr_factor() == "auto":
+                        eq_extra_options["hydrogen mass repartitioning factor"] = "1.5"
+                        prod_extra_options["hydrogen mass repartitioning factor"] = "1.5"
+                    else:
+                        eq_extra_options["hydrogen mass repartitioning factor"] = f"{protocol.hmr_factor()}"
+                        prod_extra_options["hydrogen mass repartitioning factor"] = f"{protocol.hmr_factor()}"
 
                 for key, value in protocol.config_options()["all"].items():
                     eq_extra_options[key] = value
@@ -541,7 +565,7 @@ class fepprep:
                     system,
                     freenrg_protocol,
                     engine=f"{protocol.engine()}",
-                    work_dir=f"{work_dir}/{leg}_{rep}",
+                    work_dir=f"{work_dir}/{leg}_{rep}/prod",
                     extra_options=prod_extra_options,
                     ignore_warnings=True,
                 )
@@ -622,12 +646,12 @@ class fepprep:
             )
             for lig, lam_list in zip(ligs, [first_half, sec_half]):
                 for leg in ["bound", "free"]:
-                    for part in ["min/", "heat/", "eq/", ""]:
+                    for part in ["min", "heat", "eq", "prod"]:
                         try:  # so will not copy if folders do not exist
                             for lam in lam_list:
                                 copy_tree(
-                                    f"{work_dir}/{lig}/{leg}_{rep}/{part}lambda_{lam:.4f}",
-                                    f"{work_dir}/{leg}_{rep}/{part}lambda_{lam:.4f}",
+                                    f"{work_dir}/{lig}/{leg}_{rep}/{part}/lambda_{lam:.4f}",
+                                    f"{work_dir}/{leg}_{rep}/{part}/lambda_{lam:.4f}",
                                 )
                         except:
                             pass

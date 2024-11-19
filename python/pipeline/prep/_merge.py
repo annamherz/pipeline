@@ -224,9 +224,9 @@ class merge:
         """
 
         complete_rings = True
-        prune_perturbed_constraints = None
-        prune_crossing_constraints = None
-        prune_atom_types = None
+        prune_perturbed_constraints = False
+        prune_crossing_constraints = False
+        prune_atom_types = False
         scoring_function = "rmsd_flex_align"
         prematch = {}
 
@@ -292,7 +292,6 @@ class merge:
             prune_perturbed_constraints=prune_perturbed_constraints,
             prune_crossing_constraints=prune_crossing_constraints,
             prune_atom_types=prune_atom_types,
-            **kwargs,
         )
 
         return (ligand_0.getAtoms(), ligand_1.getAtoms(), mapping)

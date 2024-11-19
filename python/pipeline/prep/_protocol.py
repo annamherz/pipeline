@@ -269,6 +269,7 @@ class pipeline_protocol(protocol):
             "hmr factor": "auto",
             "timestep overwrite": "True",
             "timestep": "2",
+            "equilibration timestep": "2",
             "timestep unit": "fs",
             "repeats": "1",
             "trajectories": "None",
@@ -280,8 +281,8 @@ class pipeline_protocol(protocol):
             "pressure": "1",
             "pressure unit": "bar",
             "minimisation steps": "10000",
-            "equilibrium runtime": "100",
-            "equilibrium runtime unit": "ps",
+            "equilibration runtime": "100",
+            "equilibration runtime unit": "ps",
             "engines": "ALL",
             "fepprep": "both",
             "number of lambda windows": "12",
@@ -366,8 +367,8 @@ class pipeline_protocol(protocol):
         self.pressure(query_dict["pressure"])
         self.pressure_unit(query_dict["pressure unit"])
         self.min_steps(query_dict["minimisation steps"])
-        self.eq_runtime(query_dict["equilibrium runtime"])
-        self.eq_runtime_unit(query_dict["equilibrium runtime unit"])
+        self.eq_runtime(query_dict["equilibration runtime"])
+        self.eq_runtime_unit(query_dict["equilibration runtime unit"])
         self.engines(query_dict["engines"])
         self.fepprep(query_dict["fepprep"])
         self.num_lambda(query_dict["number of lambda windows"])
@@ -387,6 +388,7 @@ class pipeline_protocol(protocol):
         self.hmr_factor(query_dict["hmr factor"])
 
         self.timestep(query_dict["timestep"])
+        self.eq_timestep(query_dict["equilibration timestep"])
         self.timestep_unit(query_dict["timestep unit"])
         self.timestep_overwrite(query_dict["timestep overwrite"])
 
@@ -807,18 +809,18 @@ class pipeline_protocol(protocol):
         return value
 
     def eq_runtime(self, value: Optional[int] = None) -> int:
-        """set the equilibrium runtime in the protocol or return its value.
+        """set the equilibration runtime in the protocol or return its value.
 
         Args:
-            value (int, optional): the equilibrium runtime. Defaults to None.
+            value (int, optional): the equilibration runtime. Defaults to None.
 
         Returns:
-            int: the equilibrium runtime
+            int: the equilibration runtime
         """
 
         if value:
             value = validate.integer(value)
-            self._query_dict["equilibrium runtime"] = value
+            self._query_dict["equilibration runtime"] = value
             self._eq_runtime = value
         else:
             value = self._eq_runtime
@@ -826,18 +828,18 @@ class pipeline_protocol(protocol):
         return value
 
     def eq_runtime_unit(self, value: Optional[str] = None) -> str:
-        """set the equilibrium runtime unit of the simulation in the protocol or return its value.
+        """set the equilibration runtime unit of the simulation in the protocol or return its value.
 
         Args:
-            value (str, optional): the equilibrium runtime unit. Defaults to None.
+            value (str, optional): the equilibration runtime unit. Defaults to None.
 
         Returns:
-            str: equilibrium runtime unit
+            str: equilibration runtime unit
         """
 
         if value:
             value = validate.time_unit(value)
-            self._query_dict["equilibrium runtime unit"] = value
+            self._query_dict["equilibration runtime unit"] = value
             self._eq_runtime_unit = value
         else:
             value = self._eq_runtime_unit
@@ -978,6 +980,25 @@ class pipeline_protocol(protocol):
 
         return value
 
+    def eq_timestep(self, value: Optional[float] = None) -> float:
+        """set the equilibration timestep in the protocol or return its value.
+
+        Args:
+            value (float, optional): the timestep (ideally in femtoseconds). Defaults to None.
+
+        Returns:
+            float: the timestep
+        """
+
+        if value:
+            value = validate.is_float(value)
+            self._query_dict["equilibration timestep"] = value
+            self._eq_timestep = value
+        else:
+            value = self._eq_timestep
+
+        return value
+    
     def config_options(self, value: Optional[dict] = None) -> dict:
 
         if value:

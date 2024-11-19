@@ -535,12 +535,22 @@ class analyse:
             "mbar method": self._mbar_method,
         }
 
+        if os.path.exists(f"{self._work_dir}/{self._b_folders[0]}/prod"):
+            # check with just the first bound folder
+            pass
+        else:
+            for leg in self._b_folders + self._f_folders:
+                validate.folder_path(f"{self._work_dir}/{leg}/prod", create=True)
+                list_dir = sorted([folder_name for folder_name in os.listdir(f"{self._work_dir}/{leg}") if "lambda" in folder_name])
+                for lambda_folder in list_dir:
+                    shutil.move(f"{self._work_dir}/{leg}/{lambda_folder}", f"{self._work_dir}/{leg}/prod/{lambda_folder}")
+
         # Analyse the results for each leg of the transformation.
         for b in self._b_repeats:
             try:
                 name = str(b) + "_bound"
                 pmf_bound, overlap_matrix_bound = BSS.FreeEnergy.Relative.analyse(
-                    f"{self._work_dir}/{self._b_folders[b]}",
+                    f"{self._work_dir}/{self._b_folders[b]}/prod",
                     estimator=self.estimator,
                     method=self.method,
                     **process_dict,
@@ -558,7 +568,7 @@ class analyse:
             try:
                 name = str(f) + "_free"
                 pmf_free, overlap_matrix_free = BSS.FreeEnergy.Relative.analyse(
-                    f"{self._work_dir}/{self._f_folders[f]}",
+                    f"{self._work_dir}/{self._f_folders[f]}/prod",
                     estimator=self.estimator,
                     method=self.method,
                     **process_dict,
