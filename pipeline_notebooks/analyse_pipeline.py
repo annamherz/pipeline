@@ -12,8 +12,7 @@ from pipeline.analysis import *
 
 
 def analyse_results(main_dir, experimental_file):
-    """simple analysis of the entire pipeline.
-    """
+    """simple analysis of the entire pipeline."""
 
     # choose location for the files
     net_file = f"{main_dir}/execution_model/network.dat"

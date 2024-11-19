@@ -13,7 +13,8 @@ import scipy.stats as _stats
 import numpy as np
 import seaborn as sns
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 # analysis paper
 # import libraries
@@ -59,12 +60,10 @@ ana_dicts = {
 network_dict = {}
 
 for network in ["combined"]:  # lomap rbfenn combined
-
     # all the options
     ana_obj_dict = {}
 
     for protein in ["tyk2", "mcl1", "hif2a", "syk", "p38", "cmet"]:
-
         ana_obj_dict[protein] = {}
 
         for ana_dict in ana_dicts.items():
@@ -80,10 +79,18 @@ for network in ["combined"]:  # lomap rbfenn combined
             # if need size of protein
             try:
                 prot = BSS.IO.readMolecules(
-                    [f"{bench_folder}/inputs/{protein}/{protein}_prep/{protein}.gro", f"{bench_folder}/inputs/{protein}/{protein}_prep/{protein}.top"])[0]
+                    [
+                        f"{bench_folder}/inputs/{protein}/{protein}_prep/{protein}.gro",
+                        f"{bench_folder}/inputs/{protein}/{protein}_prep/{protein}.top",
+                    ]
+                )[0]
             except:
                 prot = BSS.IO.readMolecules(
-                    [f"{bench_folder}/inputs/{protein}/{protein}_parameterised.prm7", f"{bench_folder}/inputs/{protein}/{protein}_parameterised.rst7"])[0]
+                    [
+                        f"{bench_folder}/inputs/{protein}/{protein}_parameterised.prm7",
+                        f"{bench_folder}/inputs/{protein}/{protein}_parameterised.rst7",
+                    ]
+                )[0]
 
             print(f"no of residues in the protein: {prot.nResidues()}")
 
@@ -122,10 +129,12 @@ for network in ["combined"]:  # lomap rbfenn combined
             # add ligands folder
             if os.path.isdir(f"{bench_folder}/inputs/{protein}/ligands"):
                 all_analysis_object.add_ligands_folder(
-                    f"{bench_folder}/inputs/{protein}/ligands")
+                    f"{bench_folder}/inputs/{protein}/ligands"
+                )
             else:
                 all_analysis_object.add_ligands_folder(
-                    f"{bench_folder}/inputs/{protein}/ligands_neutral")
+                    f"{bench_folder}/inputs/{protein}/ligands_neutral"
+                )
 
             ana_obj_dict[protein][ana_dict[0]] = all_analysis_object
 

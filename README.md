@@ -5,21 +5,26 @@
 
 First, create a conda/mamba environment:
 
-`conda create --name pipeline python=3.9 pip`
+`conda create --name pipeline python=3.10 pip`
 
 Install requirements:
 
-`conda install -c conda-forge openmm=7.7.0 openff-toolkit openff-interchange openff-units openff-utilities openff-forcefields lomap2`
+`conda install -c conda-forge openmm openff-toolkit openff-interchange openff-units openff-utilities openff-forcefields lomap2`
 
-`conda install -c openbiosim/label/dev sire==2023.3`
+`conda install -c openbiosim sire==2024.3.0`
 
 and also install the requirements listed:
 
 `pip install -r requirements.txt`
 
 Clone the correct BioSimSpace version (https://github.com/michellab/BioSimSpace/releases/tag/RBFE-benchmark) and install this in the environment.
+# change branch - newer on openbiosim
 
 Follow the instructions there to install the branch.
+
+To use flex align, kcombu also needs to be installed:
+
+`conda install openbiosim::kcombu_bss`
 
 Finally, go to the python directory and install the pipeline in the environment using:
 

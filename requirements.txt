@@ -15,7 +15,6 @@ backcall
 backports.functools-lru-cache 
 beautifulsoup4 
 biopython 
-BioSimSpace==2022.2.1+115.g93d89b16
 bleach 
 brotlipy 
 cached-property 
@@ -39,7 +38,7 @@ entrypoints
 exceptiongroup 
 executing 
 fasteners 
-fastjsonschema 
+fastjsonschema
 flit_core 
 fonttools 
 greenlet 
@@ -56,7 +55,7 @@ ipython
 ipython-genutils==0.2.0
 ipywidgets 
 jax 
-jaxlib==0.4.2
+jaxlib
 jedi 
 Jinja2 
 joblib 
@@ -92,7 +91,6 @@ nglview
 numpy
 notebook
 notebook_shim
-OpenMM==7.7.0
 opt-einsum 
 packaging 
 packmol-memgen==1.2.3rc0
@@ -108,7 +106,6 @@ pexpect
 pickleshare 
 Pillow 
 Pint 
-pipeline==0.1
 pkgutil_resolve_name 
 platformdirs 
 plotly 
@@ -119,8 +116,9 @@ prompt-toolkit
 psutil 
 ptyprocess 
 pure-eval 
+pyarrow
 py3Dmol 
-pycairo==1.23.0
+pycairo
 pycodestyle==2.9.1
 pycparser 
 pydantic 

@@ -103,13 +103,10 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--folder", help="Folder for the files", default=None, type=str)
+    parser.add_argument("--folder", help="Folder for the files", default=None, type=str)
 
     parser.add_argument("--top", help="Topology file", default=None, type=str)
-    parser.add_argument(
-        "--coord", help="Coordinate file", default=None, type=str
-    )
+    parser.add_argument("--coord", help="Coordinate file", default=None, type=str)
     parser.add_argument(
         "--traj",
         help="Trajectory file. Specifying --traj '' will cause the trajectory to be ignored.",
@@ -170,11 +167,11 @@ def main():
     if top_file[-4:] == "prm7":
         if args.folder:
             subprocess.run(
-                f"ln -sf {top_file} {args.folder}/somd.parm7", shell=True, check=True)
+                f"ln -sf {top_file} {args.folder}/somd.parm7", shell=True, check=True
+            )
             top_file = f"{args.folder}/somd.parm7"
         else:
-            subprocess.run(
-                f"ln -sf {top_file} somd.parm7", shell=True, check=True)
+            subprocess.run(f"ln -sf {top_file} somd.parm7", shell=True, check=True)
             top_file = "somd.parm7"
 
     # Unwrap trajectory if required

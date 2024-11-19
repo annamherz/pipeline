@@ -13,11 +13,13 @@ import networkx as nx
 import glob
 from scipy.stats import sem as sem
 import sys
+
 # sys.path.insert(1, "/home/anna/Documents/code/python/pipeline")
 
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-warnings.simplefilter(action='ignore', category=RuntimeWarning)
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
+warnings.simplefilter(action="ignore", category=RuntimeWarning)
 # warnings.simplefilter(action='ignore', category=SettingWithCopyWarning)
 
 logging.getLogger().setLevel(logging.ERROR)
@@ -42,102 +44,103 @@ def check_normal_dist(values):
 
 # %%
 # define the analysis method to use
-ana_dicts = {"plain": {
-    "estimator": "MBAR",
-    "method": "alchemlyb",
-    "check overlap": True,
-    "try pickle": True,
-    "save pickle": True,
-    "auto equilibration": False,
-    "statistical inefficiency": False,
-    "truncate lower": 0,
-    "truncate upper": 100,
-    "name": None,
-},
+ana_dicts = {
+    "plain": {
+        "estimator": "MBAR",
+        "method": "alchemlyb",
+        "check overlap": True,
+        "try pickle": True,
+        "save pickle": True,
+        "auto equilibration": False,
+        "statistical inefficiency": False,
+        "truncate lower": 0,
+        "truncate upper": 100,
+        "name": None,
+    },
     "subsampling": {
-    "estimator": "MBAR",
-    "method": "alchemlyb",
-    "check overlap": True,
-    "try pickle": True,
-    "save pickle": True,
-    "auto equilibration": False,
-    "statistical inefficiency": True,
-    "truncate lower": 0,
-    "truncate upper": 100,
-    "name": None,
-},
+        "estimator": "MBAR",
+        "method": "alchemlyb",
+        "check overlap": True,
+        "try pickle": True,
+        "save pickle": True,
+        "auto equilibration": False,
+        "statistical inefficiency": True,
+        "truncate lower": 0,
+        "truncate upper": 100,
+        "name": None,
+    },
     "1ns": {
-    "estimator": "MBAR",
-    "method": "alchemlyb",
-    "check overlap": True,
-    "try pickle": True,
-    "save pickle": True,
-    "auto equilibration": False,
-    "statistical inefficiency": True,
-    "truncate lower": 0,
-    "truncate upper": 25,
-    "name": None,
-},
+        "estimator": "MBAR",
+        "method": "alchemlyb",
+        "check overlap": True,
+        "try pickle": True,
+        "save pickle": True,
+        "auto equilibration": False,
+        "statistical inefficiency": True,
+        "truncate lower": 0,
+        "truncate upper": 25,
+        "name": None,
+    },
     "2ns": {
-    "estimator": "MBAR",
-    "method": "alchemlyb",
-    "check overlap": True,
-    "try pickle": True,
-    "save pickle": True,
-    "auto equilibration": False,
-    "statistical inefficiency": True,
-    "truncate lower": 0,
-    "truncate upper": 50,
-    "name": None,
-},
+        "estimator": "MBAR",
+        "method": "alchemlyb",
+        "check overlap": True,
+        "try pickle": True,
+        "save pickle": True,
+        "auto equilibration": False,
+        "statistical inefficiency": True,
+        "truncate lower": 0,
+        "truncate upper": 50,
+        "name": None,
+    },
     "3ns": {
-    "estimator": "MBAR",
-    "method": "alchemlyb",
-    "check overlap": True,
-    "try pickle": True,
-    "save pickle": True,
-    "auto equilibration": False,
-    "statistical inefficiency": True,
-    "truncate lower": 0,
-    "truncate upper": 75,
-    "name": None,
-},
+        "estimator": "MBAR",
+        "method": "alchemlyb",
+        "check overlap": True,
+        "try pickle": True,
+        "save pickle": True,
+        "auto equilibration": False,
+        "statistical inefficiency": True,
+        "truncate lower": 0,
+        "truncate upper": 75,
+        "name": None,
+    },
     "autoeq": {
-    "estimator": "MBAR",
-    "method": "alchemlyb",
-    "check overlap": True,
-    "try pickle": True,
-    "save pickle": True,
-    "auto equilibration": True,
-    "statistical inefficiency": True,
-    "truncate lower": 0,
-    "truncate upper": 100,
-    "name": None,
-},
+        "estimator": "MBAR",
+        "method": "alchemlyb",
+        "check overlap": True,
+        "try pickle": True,
+        "save pickle": True,
+        "auto equilibration": True,
+        "statistical inefficiency": True,
+        "truncate lower": 0,
+        "truncate upper": 100,
+        "name": None,
+    },
     "TI": {
-    "estimator": "TI",
-    "method": "alchemlyb",
-    "check overlap": True,
-    "try pickle": True,
-    "save pickle": True,
-    "auto equilibration": False,
-    "statistical inefficiency": True,
-    "truncate lower": 0,
-    "truncate upper": 100,
-    "name": None,
-},
+        "estimator": "TI",
+        "method": "alchemlyb",
+        "check overlap": True,
+        "try pickle": True,
+        "save pickle": True,
+        "auto equilibration": False,
+        "statistical inefficiency": True,
+        "truncate lower": 0,
+        "truncate upper": 100,
+        "name": None,
+    },
     "single": {
-    "estimator": "MBAR",
-    "method": "alchemlyb",
-    "check overlap": True,
-    "try pickle": True,
-    "save pickle": True,
-    "auto equilibration": False,
-    "statistical inefficiency": False,
-    "truncate lower": 0,
-    "truncate upper": 100,
-    "name": None,
-}
+        "estimator": "MBAR",
+        "method": "alchemlyb",
+        "check overlap": True,
+        "try pickle": True,
+        "save pickle": True,
+        "auto equilibration": False,
+        "statistical inefficiency": False,
+        "truncate lower": 0,
+        "truncate upper": 100,
+        "name": None,
+    },
 }
 
 # %%
@@ -148,7 +151,6 @@ network = "combined"  # lomap rbfenn combined
 ana_obj_dict = {}
 
 for protein in ["tyk2", "mcl1", "hif2a", "syk", "p38", "cmet"]:
-
     ana_obj_dict[protein] = {}
 
     for ana_dict in ana_dicts:
@@ -165,10 +167,18 @@ for protein in ["tyk2", "mcl1", "hif2a", "syk", "p38", "cmet"]:
         # if need size of protein
         try:
             prot = BSS.IO.readMolecules(
-                [f"{bench_folder}/inputs/{protein}/{protein}_prep/{protein}.gro", f"{bench_folder}/inputs/{protein}/{protein}_prep/{protein}.top"])[0]
+                [
+                    f"{bench_folder}/inputs/{protein}/{protein}_prep/{protein}.gro",
+                    f"{bench_folder}/inputs/{protein}/{protein}_prep/{protein}.top",
+                ]
+            )[0]
         except:
             prot = BSS.IO.readMolecules(
-                [f"{bench_folder}/inputs/{protein}/{protein}_parameterised.prm7", f"{bench_folder}/inputs/{protein}/{protein}_parameterised.rst7"])[0]
+                [
+                    f"{bench_folder}/inputs/{protein}/{protein}_parameterised.prm7",
+                    f"{bench_folder}/inputs/{protein}/{protein}_parameterised.rst7",
+                ]
+            )[0]
 
         print(f"no of residues in the protein: {prot.nResidues()}")
 
@@ -200,16 +210,17 @@ for protein in ["tyk2", "mcl1", "hif2a", "syk", "p38", "cmet"]:
         all_analysis_object.compute_results()
 
         if ana_dict == "single":
-            all_analysis_object.file_ext = all_analysis_object.file_ext + \
-                f"_{ana_dict}"
+            all_analysis_object.file_ext = all_analysis_object.file_ext + f"_{ana_dict}"
 
         # add ligands folder
         if os.path.isdir(f"{bench_folder}/inputs/{protein}/ligands"):
             all_analysis_object.add_ligands_folder(
-                f"{bench_folder}/inputs/{protein}/ligands")
+                f"{bench_folder}/inputs/{protein}/ligands"
+            )
         else:
             all_analysis_object.add_ligands_folder(
-                f"{bench_folder}/inputs/{protein}/ligands_neutral")
+                f"{bench_folder}/inputs/{protein}/ligands_neutral"
+            )
 
         ana_obj_dict[protein][ana_dict] = all_analysis_object
 
@@ -218,7 +229,6 @@ print(ana_obj_dict)
 # %%
 # make single vs triplicate results
 for prot in ana_obj_dict.keys():
-
     ana_obj = ana_obj_dict[prot]["single"]
     # function for single dicts
     ana_obj.compute_single_repeat_results()
@@ -273,7 +283,8 @@ for prot in ana_obj_dict.keys():
     print(prot)
     for eng in ana_obj.engines:
         print(
-            f"failed percentage for {eng}: {100 - ana_obj.successful_perturbations(eng)[1]} ({len(ana_obj.perturbations) - len(ana_obj.successful_perturbations(eng)[2])} / {len(ana_obj.perturbations)})")
+            f"failed percentage for {eng}: {100 - ana_obj.successful_perturbations(eng)[1]} ({len(ana_obj.perturbations) - len(ana_obj.successful_perturbations(eng)[2])} / {len(ana_obj.perturbations)})"
+        )
         print(f"{eng} failed perturbations: {ana_obj.failed_perturbations(engine=eng)}")
         print(f"{eng} disconnected ligands: {ana_obj.disconnected_ligands(engine=eng)}")
 
@@ -286,13 +297,11 @@ for prot in ana_obj_dict.keys():
         ana_obj = ana_obj_dict[prot][name]
 
         for eng in ana_obj.engines:
-            print(
-                f"outliers {eng}: {ana_obj.get_outliers(threshold=10, name=eng)}")
+            print(f"outliers {eng}: {ana_obj.get_outliers(threshold=10, name=eng)}")
 
 # exclude outliers
 threshold = 10
 for prot in ana_obj_dict.keys():
-
     for name in ana_dicts.keys():
         print(prot, name)
         ana_obj = ana_obj_dict[prot][name]
@@ -309,18 +318,15 @@ sem_dict = {}
 sem_dict_name = {}
 
 for name in ana_dicts:
-
     sem_list_name = []
 
     for prot in ana_obj_dict.keys():
-
         sem_dict[prot] = {}
         sem_dict[prot][name] = {}
 
         ana_obj = ana_obj_dict[prot][name]  # subsampling
 
         for eng in ana_obj.engines:
-
             sem_dict[prot][name][eng] = {}
 
             sem_list = []
@@ -329,28 +335,36 @@ for name in ana_dicts:
             sem_list_name.append(sems)
 
             sem_list = reduce(lambda xs, ys: xs + ys, sem_list)
-            sem_list = [x for x in sem_list if str(x) != 'nan']
+            sem_list = [x for x in sem_list if str(x) != "nan"]
 
             # if not check_normal_dist(sem_list):
             #     print(f"{prot} {name} not normally dist")
 
             mean = np.mean(sem_list)
-            lower_ci, upper_ci = _stats.norm.interval(confidence=0.95,
-                                                      loc=np.mean(sem_list),
-                                                      scale=_stats.sem(sem_list))
+            lower_ci, upper_ci = _stats.norm.interval(
+                confidence=0.95, loc=np.mean(sem_list), scale=_stats.sem(sem_list)
+            )
             print(prot, name, eng, mean, lower_ci, upper_ci)
-            sem_dict[prot][name][eng] = (mean, _stats.tstd(
-                sem_list), (lower_ci, upper_ci), sem_list)
+            sem_dict[prot][name][eng] = (
+                mean,
+                _stats.tstd(sem_list),
+                (lower_ci, upper_ci),
+                sem_list,
+            )
 
     sem_list_name = reduce(lambda xs, ys: xs + ys, sem_list_name)
-    sem_list_name = [x for x in sem_list_name if str(x) != 'nan']
+    sem_list_name = [x for x in sem_list_name if str(x) != "nan"]
     mean = np.mean(sem_list_name)
-    lower_ci, upper_ci = _stats.norm.interval(confidence=0.95,
-                                              loc=np.mean(sem_list_name),
-                                              scale=_stats.sem(sem_list_name))
+    lower_ci, upper_ci = _stats.norm.interval(
+        confidence=0.95, loc=np.mean(sem_list_name), scale=_stats.sem(sem_list_name)
+    )
     print(name, mean, lower_ci, upper_ci)
-    sem_dict_name[name] = (mean, _stats.tstd(
-        sem_list_name), (lower_ci, upper_ci), sem_list_name)
+    sem_dict_name[name] = (
+        mean,
+        _stats.tstd(sem_list_name),
+        (lower_ci, upper_ci),
+        sem_list_name,
+    )
 
 
 # %%
@@ -367,14 +381,11 @@ for prot in ana_obj_dict.keys():
             pass
 
         for eng in ana_obj.engines:
-
             stats_string = ""
             try:
-
                 stats_string += f"{eng} MAE: {mae[0][eng]['experimental']:.2f} +/- {mae[1][eng]['experimental']:.2f} kcal/mol, "
                 if method == "single":
-                    errors = [val[1]
-                              for val in ana_obj.calc_pert_dict[eng].values()]
+                    errors = [val[1] for val in ana_obj.calc_pert_dict[eng].values()]
                     stats_string += f"error: {np.mean(errors):.2f} +/- {_stats.tstd(errors):.2f} kcal/mol\n"
                 else:
                     stats_string += f"SEM: {sem_dict[prot][name][eng][0]:.2f} +/- {sem_dict[prot][name][eng][1]:.2f} kcal/mol\n"
@@ -384,7 +395,8 @@ for prot in ana_obj_dict.keys():
 
             try:
                 ana_obj.plot_scatter_ddG(
-                    engines=eng, suptitle=f"{prot}, {method}\n", title=f"{stats_string}")
+                    engines=eng, suptitle=f"{prot}, {method}\n", title=f"{stats_string}"
+                )
                 ana_obj.plot_scatter_ddG(engines=eng, use_cinnabar=True)
             except:
                 pass
@@ -392,6 +404,7 @@ for prot in ana_obj_dict.keys():
 
         try:
             ana_obj.plot_scatter_ddG(
-                title=f"{prot}, {method}\n {stats_string_all}", engines=ana_obj.engines)
+                title=f"{prot}, {method}\n {stats_string_all}", engines=ana_obj.engines
+            )
         except:
             print(f"could not plot {prot} {method}")

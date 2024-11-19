@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from pipeline.utils import *
 import pandas as pd
 
+
 def ask_things():
     lig_ff = str(
         input(
@@ -143,7 +144,6 @@ def main():
             pl.remove_ligand(lig)
     else:
         pass
-
 
     net_file_path = str(
         input(
