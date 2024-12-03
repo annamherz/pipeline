@@ -260,7 +260,7 @@ class pipeline_protocol(protocol):
         default_dict = {
             "ligand forcefield": "gaff2",
             "solvent": "TIP3P",
-            "box edges": "30",
+            "box edges": "15",
             "box edges unit": "angstrom",
             "box type": "cubic",
             "sampling": "2",

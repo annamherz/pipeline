@@ -69,12 +69,17 @@ def add_header_simfile(trans_dir):
 
     for leg in legs:
         lambdas = []
-        for dir in sorted(os.listdir(f"{trans_dir}/{leg}")):
+        if os.path.exists(f"{trans_dir}/{leg}/prod"):
+            leg_prod_dir = f"{trans_dir}/{leg}/prod"
+        else:
+            leg_prod_dir = f"{trans_dir}/{leg}"
+
+        for dir in sorted(os.listdir(f"{leg_prod_dir}")):
             if "lambda" in dir:
                 lambdas.append(dir.split("_")[1])
 
         for lam in lambdas:
-            direc = f"{trans_dir}/{leg}/lambda_{lam}"
+            direc = f"{leg_prod_dir}/lambda_{lam}"
 
             sim_okay = False
             hash_counter = 0
@@ -315,48 +320,56 @@ class extract:
 
         # exclude the min, heat, eq directories from extraction.
         for dirs in dir_list:
-            if not "min" in dirs:
+            if "prod" in dirs:
+                extract = True
+                dirs_found += 1
+            elif not "min" in dirs:
                 if not "heat" in dirs:
                     if not "eq" in dirs:
+                        extract = True
                         dirs_found += 1
-                        if "lambda" in dirs:
-                            new_dir = validate.folder_path(
-                                f"{extract_dir}{dirs.split(f'{folder}')[1]}",
-                                create=True,
-                            )
-                            # check if too many engines in the file path
-                            if len([x for x in validate.engines() if x in dirs]) > 1:
-                                print(
-                                    "There are too many engines found in the file path. will check for all output formats....")
-                                file_names = ["amber.out",
-                                              "gromacs.xvg", "simfile.dat"]
-                            elif "AMBER" in dirs:
-                                file_names = ["amber.out"]
-                            elif "GROMACS" in dirs:
-                                file_names = ["gromacs.xvg"]
-                            elif "SOMD" in dirs:
-                                file_names = ["simfile.dat"]
-                            # if cant find the engine in the file path try all
-                            else:
-                                print(
-                                    "no engine found in filepath, will try to extract each engine's output format..."
-                                )
-                                file_names = ["amber.out",
-                                              "gromacs.xvg", "simfile.dat"]
+            else:
+                extract=False
+            
+            if extract_dir:
+                if "lambda" in dirs:
+                    new_dir = validate.folder_path(
+                        f"{extract_dir}{dirs.split(f'{folder}')[1]}",
+                        create=True,
+                    )
+                    # check if too many engines in the file path
+                    if len([x for x in validate.engines() if x in dirs]) > 1:
+                        print(
+                            "There are too many engines found in the file path. will check for all output formats....")
+                        file_names = ["amber.out",
+                                    "gromacs.xvg", "simfile.dat"]
+                    elif "AMBER" in dirs:
+                        file_names = ["amber.out"]
+                    elif "GROMACS" in dirs:
+                        file_names = ["gromacs.xvg"]
+                    elif "SOMD" in dirs:
+                        file_names = ["simfile.dat"]
+                    # if cant find the engine in the file path try all
+                    else:
+                        print(
+                            "no engine found in filepath, will try to extract each engine's output format..."
+                        )
+                        file_names = ["amber.out",
+                                    "gromacs.xvg", "simfile.dat"]
 
-                            for file in file_names:
-                                try:
-                                    shutil.copyfile(
-                                        f"{dirs}/{file}", f"{new_dir}/{file}"
-                                    )
-                                    if os.path.getsize(f"{new_dir}/{file}") == 0:
-                                        print(
-                                            f"File extracting to '{new_dir}/{file}' is empty!"
-                                        )
-                                except:
-                                    print(
-                                        f"{dirs} does not have a recognised input file, {str(file)}."
-                                    )
+                    for file in file_names:
+                        try:
+                            shutil.copyfile(
+                                f"{dirs}/{file}", f"{new_dir}/{file}"
+                            )
+                            if os.path.getsize(f"{new_dir}/{file}") == 0:
+                                print(
+                                    f"File extracting to '{new_dir}/{file}' is empty!"
+                                )
+                        except:
+                            print(
+                                f"{dirs} does not have a recognised input file, {str(file)}."
+                            )
 
         if dirs_found == 0:
             raise ValueError(
@@ -401,7 +414,13 @@ class extract:
 
         for leg in legs:
             lambdas = []
-            for dir in sorted(os.listdir(f"{trans_dir}/{leg}")):
+
+            if os.path.exists(f"{trans_dir}/{leg}/prod"):
+                leg_prod_dir = f"{trans_dir}/{leg}/prod"
+            else:
+                leg_prod_dir = f"{trans_dir}/{leg}"
+
+            for dir in sorted(os.listdir(f"{leg_prod_dir}")):
                 if "lambda" in dir:
                     lambdas.append(dir.split("_")[1])
 
@@ -409,7 +428,7 @@ class extract:
                 # only do it for considered lambdas
                 if lam in traj_lambdas:
                     # get target directory for extraction and create
-                    direc = f"{trans_dir}/{leg}/lambda_{lam}"
+                    direc = f"{leg_prod_dir}/lambda_{lam}"
                     traj_extract_dir = (
                         f"{direc.replace(self.trans_dir, self.extract_dir)}"
                     )

@@ -68,7 +68,6 @@ jupyter_core
 jupyterlab-pygments 
 jupyterlab-widgets 
 kiwisolver
-lomap2
 MarkupSafe 
 matplotlib 
 matplotlib-inline 

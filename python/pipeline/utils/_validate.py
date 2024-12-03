@@ -242,6 +242,7 @@ class validate:
             "parsely",
             "gaff",
             "gaff2",
+            "openff_unconstrained-2.2.1",
             "openff_unconstrained-2.0.0",
             "openff_unconstrained-1.3.0",
             "openff",
@@ -250,11 +251,11 @@ class validate:
             raise ValueError(f"'lig_ff' must be one of {lig_ff_list}.")
 
         if lig_ff == "sage":
-            lig_ff = "openff_unconstrained-2.0.0"
+            lig_ff = "openff_unconstrained-2.2.1"
         elif lig_ff == "parsely":
             lig_ff = "openff_unconstrained-1.3.0"
         elif lig_ff == "openff":
-            lig_ff = "openff_unconstrained-2.0.0"
+            lig_ff = "openff_unconstrained-2.2.1"
 
         return lig_ff
 

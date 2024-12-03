@@ -91,6 +91,7 @@ gmx23 mdrun -ntmpi 1 -deffnm heat/lambda_$lam/gromacs ;
 echo "eq"
 gmx23 grompp -maxwarn 1 -f eq/lambda_$lam/gromacs.mdp -c heat/lambda_$lam/gromacs.gro -p eq/lambda_$lam/gromacs.top -t heat/lambda_$lam/gromacs.cpt  -o eq/lambda_$lam/gromacs.tpr
 gmx23 mdrun -ntmpi 1 -deffnm eq/lambda_$lam/gromacs ;
+
 echo "prod"
 gmx23 grompp -maxwarn 1 -f prod/lambda_$lam/gromacs.mdp -c eq/lambda_$lam/gromacs.gro -p prod/lambda_$lam/gromacs.top -t eq/lambda_$lam/gromacs.cpt -o prod/lambda_$lam/gromacs.tpr
 gmx23 mdrun -ntmpi 1 -deffnm prod/lambda_$lam/gromacs ;

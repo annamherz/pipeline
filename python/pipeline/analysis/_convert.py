@@ -84,7 +84,48 @@ class convert:
 
         return kcal_val, kcal_err
 
+    @staticmethod
+    def _read_yml_kcal(
+        exp_file,
+    ) -> dict:
+        """convert yml file into experimental dictionary of values.
 
+        Args:
+            exp_file (str): yml file. Each key is a ligand, with a 'measurement' that has 'unit', 'value', 'error'. Unit in uM or nM.
+            temperature (int, optional): Temperature to use during the conversion. Defaults to 300.
+            format_type(str): "Ki" or "IC50". Format of the raw data dict.
+
+        Returns:
+            dict: kcal/mol value for each ligand
+        """
+
+        exp_file = validate.file_path(exp_file)
+
+        with open(exp_file, "r") as file:
+            data = yaml.safe_load(file)  # loads as dictionary
+
+        exper_dict = {}
+        for key in data.keys():  # write for each ligand that was in yaml file
+            value=None
+            error=None
+            # check what type of data
+            if data[key]["measurement"]["type"].lower().strip() == "dg":
+                if data[key]["measurement"]["unit"] == "kcal/mol":
+
+                    value = data[key]["measurement"]["value"]
+                    error = data[key]["measurement"]["error"]
+
+            if not error or error == -1:
+                # assume error of 0.64 kcal/mol, assuming it was a pKi measurement, https://livecomsjournal.org/index.php/livecoms/article/view/v4i1e1497/1399
+                # the log is base 10 so for antilog error propagation: https://sites.science.oregonstate.edu/~gablek/CH361/Propagation.htm
+                error = 0.64
+
+            exper_dict[key] = (
+                value,
+                error,
+            )
+
+        return exper_dict
 
     @staticmethod
     def _yml_into_exper_raw_dict(
@@ -132,11 +173,7 @@ class convert:
                 
                 pki_err_factor = 0.55
             else:
-                factor = 0.5
-                pki_err_factor = 0.55
-                logging.error(
-                    "the type of data was not recognised. Must be IC50 or Ki. Assuming IC50 ..."
-                )
+                raise Exception
 
             if data[key]["measurement"]["unit"] == "uM":
                 magnitude = 10**-6

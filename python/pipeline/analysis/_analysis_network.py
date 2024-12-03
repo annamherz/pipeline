@@ -397,9 +397,17 @@ class analysis_network:
         exp_file = self.exp_file
 
         if exp_file.split(".")[-1] == "yml":
-            exper_val_dict = convert.yml_into_exper_dict(
-                exp_file, temperature=self.temperature
-            )  # this output is in kcal/mol
+            try:
+                exper_val_dict = convert.yml_into_exper_dict(
+                    exp_file, temperature=self.temperature
+                )  # this output is in kcal/mol
+            except:
+                try:
+                    exper_val_dict = convert._read_yml_kcal(exp_file)
+                except:
+                    logging.error(
+                        "Could not convert yml. No experimental results will be analysed"
+                    )
         elif exp_file.split(".")[-1] == "csv":
             exper_val_dict = convert.csv_into_exper_dict(
                 exp_file, temperature=self.temperature
@@ -801,6 +809,7 @@ class analysis_network:
         )
 
         try:
+            #TODO so not issue if there are intermediates
             # compute the per ligand for the network
             network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
             self._cinnabar_networks.update({engine: network})

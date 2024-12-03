@@ -250,13 +250,26 @@ class initialise_pipeline:
 
         ligand_names = list(ligands_dict.keys())
 
-        transformations, lomap_scores = BSS.Align.generateNetwork(
-            list(ligands_dict.values()),
-            plot_network=True,
-            names=ligand_names,
-            work_dir=f"{folder}/visualise_network",
-            links_file=links_file,
-        )
+        try:
+            transformations, lomap_scores = BSS.Align.generateNetwork(
+                list(ligands_dict.values()),
+                plot_network=True,
+                names=ligand_names,
+                work_dir=f"{folder}/visualise_network",
+                links_file=links_file,
+            )
+        except:
+            try:
+                transformations, lomap_scores = BSS.Align.generateNetwork(
+                    list(ligands_dict.values()),
+                    plot_network=False,
+                    names=ligand_names,
+                    work_dir=f"{folder}/visualise_network",
+                    links_file=links_file,
+                )
+            except Exception as e:
+                print(e)
+                print("failed to generate network")
 
         # dict of perts
         pert_network_dict = {}

@@ -18,7 +18,7 @@ class ligprep:
 
     @staticmethod
     def lig_paramaterise(
-        molecule: BSS._SireWrappers._molecule.Molecule, ligff_query: str
+        molecule: BSS._SireWrappers._molecule.Molecule, ligff_query: str, **kwargs
     ):
         """_summary_
 
@@ -33,7 +33,7 @@ class ligprep:
         validate.lig_ff(ligff_query)
 
         param_molecule = BSS.Parameters.parameterise(
-            molecule, ligff_query
+            molecule, ligff_query, **kwargs
         ).getMolecule()
 
         return param_molecule

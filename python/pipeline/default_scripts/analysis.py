@@ -8,7 +8,6 @@ import sys
 import os as _os
 from argparse import ArgumentParser
 import logging
-from loguru import logger
 
 BSS.setVerbose = True
 
@@ -231,22 +230,6 @@ def main():
     print("checking the provided command line arguments...")
     pert, engine, ana_file, main_dir, prot_file, work_dir, run_all_methods = check_arguments(
         args)
-
-    # # make sure alchemlyb output is written to the logging
-    # for handler in logging.root.handlers[:]:
-    #     logging.root.removeHandler(handler)
-
-    # class PropagateHandler(logging.Handler):
-    #     def emit(self, record: logging.LogRecord) -> None:
-    #         logging.getLogger(record.name).handle(record)
-
-    # logger.add(PropagateHandler(), format="{message}")
-
-    # logging.basicConfig(filename=f"{work_dir}/analysis_log.txt",
-    #                     filemode='a',
-    #                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-    #                     datefmt='%H:%M:%S',
-    #                     level=logging.INFO)
 
     if not work_dir:
         # options
