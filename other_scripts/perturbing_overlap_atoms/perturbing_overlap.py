@@ -75,7 +75,9 @@ def check_arguments(args):
         file = validate.string(args.output_file)
     else:
         validate.folder_path(f"{main_folder}/outputs_extracted/analysis", create=True)
-        file = validate.string(f"{main_folder}/outputs_extracted/analysis/perturbing_overlap.dat")
+        file = validate.string(
+            f"{main_folder}/outputs_extracted/analysis/perturbing_overlap.dat"
+        )
 
     if args.protocol_file:
         protocol_file = validate.file_path(args.protocol_file)
@@ -179,7 +181,6 @@ def main():
             pass
 
         else:
-
             try:
                 pert_atoms = no_perturbing_atoms(pert, prep)
                 ana_obj = pipeline.analysis.analyse(folder, analysis_prot=ana_prot)
@@ -195,7 +196,6 @@ def main():
                 err = None
 
             with open(file, "a") as f:
-
                 writer = csv.writer(f)
                 row = [pert, eng, pert_atoms, percen_okay, too_smalls_avg, diff, err]
                 print(row)

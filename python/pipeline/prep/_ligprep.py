@@ -223,7 +223,7 @@ def min_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol):
     return protocol_min_rest, protocol_min
 
 
-def nvt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
+def nvt_prots(lig_fep: str) -> (BSS.Protocol):
     """define the nvt protocols for the equilibration. For fepprep is at lambda 0.5
 
     Args:
@@ -256,28 +256,11 @@ def nvt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
         timestep=1 * BSS.Units.Time.femtosecond,
         force_constant=100,
         restart=False,
-        thermostat_time_constant=0.5 * BSS.Units.Time.picosecond, # so collision freq 2ps^-1
+        thermostat_time_constant=0.5 * BSS.Units.Time.picosecond, # so collision freq 2ps^-1 when running with AMBER
         **args,
     )
 
-    # # NVT restraining all backbone/heavy atoms
-    # protocol_nvt_heavy = func(
-    #     runtime=200 * BSS.Units.Time.picosecond,
-    #     temperature=temperature * BSS.Units.Temperature.kelvin,
-    #     restraint="heavy",
-    #     force_constant=25,
-    #     #    restart=True,
-    #     **args,
-    # )
-    # # NVT no restraints
-    # protocol_nvt = func(
-    #     runtime=200 * BSS.Units.Time.picosecond,
-    #     temperature=temperature * BSS.Units.Temperature.kelvin,  # temperature
-    #     #  restart=True,
-    #     **args,
-    # )
-
-    return protocol_nvt_sol #, protocol_nvt_heavy, protocol_nvt
+    return protocol_nvt_sol
 
 
 def npt_prots(lig_fep: str) -> (BSS.Protocol, BSS.Protocol, BSS.Protocol):
@@ -383,7 +366,7 @@ def minimise_equilibrate_leg(
     lig_fep: str = "ligprep",
     work_dir: Optional[str] = None,
     timestep: int = 2,
-) -> BSS._SireWrappers.System:  # times at the top
+) -> BSS._SireWrappers.System: 
     """minimse and equilibrate for the given leg of the pipeline
 
     Args:
@@ -413,10 +396,6 @@ def minimise_equilibrate_leg(
     protocol_npt_heavy, protocol_npt_heavy_lighter, protocol_npt = npt_prots(
         lig_fep)
 
-    ## dont set NVT, keep at 1 fs
-    # protocol_nvt_sol.setTimeStep(timestep * BSS.Units.Time.femtosecond)
-    # protocol_nvt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
-    # protocol_nvt.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     protocol_npt_heavy.setTimeStep(timestep * BSS.Units.Time.femtosecond)
     protocol_npt_heavy_lighter.setTimeStep(
         timestep * BSS.Units.Time.femtosecond)
@@ -440,26 +419,19 @@ def minimise_equilibrate_leg(
             minimised2, protocol_nvt_sol, engine, pmemd, work_dir=f"{work_dir}/nvt1"
         )
 
-        # logging.info("nvt2")
-        # equil2 = run_process(
-        #     equil1, protocol_nvt_heavy, engine, pmemd, work_dir=f"{work_dir}/nvt2"
-        # )
-        # logging.info("nvt3")
-        # equil3 = run_process(equil2, protocol_nvt, engine, pmemd, work_dir=f"{work_dir}/nvt3")
-
         logging.info("equilibrating NPT...")
-        equil4 = run_process(
+        equil2 = run_process(
             equil1, protocol_npt_heavy, engine, pmemd, work_dir=f"{work_dir}/npt1"
         )
-        equil5 = run_process(
-            equil4,
+        equil3 = run_process(
+            equil2,
             protocol_npt_heavy_lighter,
             engine,
             pmemd,
             work_dir=f"{work_dir}/npt2",
         )
         sys_equil_fin = run_process(
-            equil5, protocol_npt, engine, pmemd, work_dir=f"{work_dir}/npt3"
+            equil3, protocol_npt, engine, pmemd, work_dir=f"{work_dir}/npt3"
         )
 
     if lig_fep == "fepprep":

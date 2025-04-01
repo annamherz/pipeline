@@ -26,40 +26,6 @@ class convert:
         pass
 
     @staticmethod
-    def yml_into_freenrgworkflows(exp_file: str, exp_file_dat: str):
-        """convert yml format into one suitable for freenergworkflows
-
-        Args:
-            exp_file (str): yml file. Each key is a ligand, with a 'measurement' that has 'unit', 'value', 'error'. Unit in uM or nM.
-            exp_file_dat (str): new file to write experimental data to (fwf format)
-        """
-        # get the experimental data into a useable format (from yml to csv)
-        # for conversion, need the values in IC50
-
-        exp_file = validate.file_path(exp_file)
-        exp_file_dat = validate.string(exp_file_dat)
-
-        # assume the temperature is 300
-        try:
-            exper_raw_dict = convert._yml_into_exper_raw_dict(exp_file, 300, "IC50")
-        except:
-            exper_raw_dict = convert._read_yml_kcal(exp_file)
-
-        with open(exp_file_dat, "w") as file:
-            writer = csv.writer(file, delimiter=",")
-            writer.writerow(["ligand", "value" ]) #, "error"])
-
-            for key in exper_raw_dict.keys():  # write for each ligand that was in yaml file
-                # TODO the error is not converted by fwf so this will present an issue
-                writer.writerow(
-                    [
-                        key,
-                        exper_raw_dict[key][0],
-                        # exper_raw_dict[key][1],
-                    ]
-                )
-
-    @staticmethod
     def convert_M_kcal(
         value: float, err: float, temperature: Optional[Union[int, float]] = 300
     ) -> tuple:

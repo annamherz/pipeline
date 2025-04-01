@@ -412,7 +412,6 @@ class pipeline_protocol(protocol):
 
         if value:
             value = value.lower()
-            # TODO currently not implemented later: "middle"
             options_list = ["start", "both", "end"]
             if value not in options_list:
                 raise ValueError(f"fepprep option must be in {options_list}")

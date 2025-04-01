@@ -4,14 +4,12 @@ import BioSimSpace as BSS
 from argparse import ArgumentParser
 import sys
 import os
+import logging
 
 BSS.setVerbose(True)
 
 from pipeline.utils import *
 from pipeline.prep import *
-
-# TODO logger file and path for it. slurm log print the logging output.
-
 
 def lig_prep(
     main_dir,

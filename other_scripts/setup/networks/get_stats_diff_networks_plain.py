@@ -53,7 +53,10 @@ import scipy
 import sklearn.metrics
 from typing import Union
 
-def compute_statistic(y_true_sample: np.ndarray, y_pred_sample: np.ndarray, statistic: str):
+
+def compute_statistic(
+    y_true_sample: np.ndarray, y_pred_sample: np.ndarray, statistic: str
+):
     """Compute requested statistic.
 
     Parameters
@@ -70,13 +73,17 @@ def compute_statistic(y_true_sample: np.ndarray, y_pred_sample: np.ndarray, stat
     def calc_RAE(y_true_sample: np.ndarray, y_pred_sample: np.ndarray):
         MAE = sklearn.metrics.mean_absolute_error(y_true_sample, y_pred_sample)
         mean = np.mean(y_true_sample)
-        MAD = np.sum([np.abs(mean - i) for i in y_true_sample]) / float(len(y_true_sample))
+        MAD = np.sum([np.abs(mean - i) for i in y_true_sample]) / float(
+            len(y_true_sample)
+        )
         return MAE / MAD
 
     def calc_RRMSE(y_true_sample: np.ndarray, y_pred_sample: np.ndarray):
         rmse = np.sqrt(sklearn.metrics.mean_squared_error(y_true_sample, y_pred_sample))
         mean_exp = np.mean(y_true_sample)
-        mds = np.sum([(mean_exp - i) ** 2 for i in y_true_sample]) / float(len(y_true_sample))
+        mds = np.sum([(mean_exp - i) ** 2 for i in y_true_sample]) / float(
+            len(y_true_sample)
+        )
         rrmse = np.sqrt(rmse**2 / mds)
         return rrmse
 
@@ -97,6 +104,7 @@ def compute_statistic(y_true_sample: np.ndarray, y_pred_sample: np.ndarray, stat
         return scipy.stats.kendalltau(y_true_sample, y_pred_sample)[0]
     else:
         raise Exception("unknown statistic '{}'".format(statistic))
+
 
 # dictionary
 best_fit_dict = {}
@@ -155,10 +163,12 @@ if random_ref:
     extensions = ["-a-optimal", "-d-optimal"]
 
 while repeat < 5001:
-
     if random_ref:
         print("running the R script...")
-        command = "/usr/bin/Rscript /home/anna/Documents/other_workflows/yang2020_optimal_designs/me/optimal_designs_prenorm.R %s %s %s" % (protein, lr, no_perts)
+        command = (
+            "/usr/bin/Rscript /home/anna/Documents/other_workflows/yang2020_optimal_designs/me/optimal_designs_prenorm.R %s %s %s"
+            % (protein, lr, no_perts)
+        )
 
         try:
             result = subprocess.run(command, shell=True, capture_output=True)
@@ -168,32 +178,33 @@ while repeat < 5001:
             continue
 
     for file_ext in extensions:
-
         network_name = f"{lr}{file_ext}"
 
         print(f"{protein}, {network_name}, {repeat}")
 
         if random_ref:
-
             file = f"/home/anna/Documents/other_workflows/yang2020_optimal_designs/me/{protein}/network_{lr}{file_ext}.dat"
 
             commands = [
-                        "sed -i 's/LIGAND_1/lig0/g' %s" % (file),
-                        "sed -i 's/LIGAND_2/lig1/g' %s" % (file)]
+                "sed -i 's/LIGAND_1/lig0/g' %s" % (file),
+                "sed -i 's/LIGAND_2/lig1/g' %s" % (file),
+            ]
 
             for command in commands:
                 try:
                     result = subprocess.run(command, shell=True, capture_output=True)
                 except:
                     continue
-                
+
         else:
             file = f"/home/anna/Documents/benchmark/reruns/{protein}/execution_model/network_{network_name}.dat"
 
         perts, ligs = pipeline.utils.get_info_network(f"{file}")
 
         if not exper_val_dict:
-            exp_file = f"/home/anna/Documents/benchmark/inputs/experimental/{protein}.yml"
+            exp_file = (
+                f"/home/anna/Documents/benchmark/inputs/experimental/{protein}.yml"
+            )
             try:
                 exper_val_dict = pipeline.analysis.convert.yml_into_exper_dict(
                     exp_file,
@@ -251,9 +262,7 @@ while repeat < 5001:
 
         # analyse using cinnabar
         # get the files into cinnabar format for analysis
-        cinnabar_file_name = (
-            f"{protein}_{network_name}_cinnabar_file.csv"
-        )
+        cinnabar_file_name = f"{protein}_{network_name}_cinnabar_file.csv"
 
         df = pd.DataFrame.from_dict(pert_dict_fep, orient="index").reset_index()
         df[["lig_0", "lig_1"]] = df["index"].str.split("~", expand=True)
@@ -271,8 +280,7 @@ while repeat < 5001:
         for key in exper_val_dict.keys():
             if key not in ligs:
                 exper_dict.pop(key)
-                logging.info(
-                    f"removed {key} from the cinnabar dict as no pert values")
+                logging.info(f"removed {key} from the cinnabar dict as no pert values")
 
         convert.cinnabar_file(
             [new_file_name],
@@ -287,19 +295,19 @@ while repeat < 5001:
         # for self plotting of per ligand
         freenrg_dict = make_dict.from_cinnabar_network_node(network, "calc")
         normalised_exper_val_dict = make_dict.from_cinnabar_network_node(
-                    network, "exp", normalise=True
-                )
- 
+            network, "exp", normalise=True
+        )
+
         x = [normalised_exper_val_dict[x][0] for x in ligs if "Intermediate" not in x]
         y = [freenrg_dict[x][0] for x in ligs if "Intermediate" not in x]
-        dg_error = compute_statistic(x,y, statistic="MUE")
-        r2_error = compute_statistic(x,y, statistic="R2")
-        ktau_error = compute_statistic(x,y, statistic="KTAU")
+        dg_error = compute_statistic(x, y, statistic="MUE")
+        r2_error = compute_statistic(x, y, statistic="R2")
+        ktau_error = compute_statistic(x, y, statistic="KTAU")
 
         x = [pert_dict[x][0] for x in perts if "Intermediate" not in x]
         y = [pert_dict_fep[x] for x in perts if "Intermediate" not in x]
-        ddg_error = compute_statistic(x,y, statistic="MUE")
-        ddg_rmse = compute_statistic(x,y, statistic="RMSE")
+        ddg_error = compute_statistic(x, y, statistic="MUE")
+        ddg_rmse = compute_statistic(x, y, statistic="RMSE")
 
         # x = [x[0] for x in normalised_exper_val_dict.values()]
         # y = [y[0] for y in freenrg_dict.values()]
@@ -345,5 +353,5 @@ for file_ext in extensions:  # ,"-a-optimal","-d-optimal"
     df.index.name = "repeat"
     if random_ref:
         df.to_csv(f"{exec_folder}/network_{network_name}_stats_random_ref.csv")
-    else: 
+    else:
         df.to_csv(f"{exec_folder}/network_{network_name}_stats.csv")

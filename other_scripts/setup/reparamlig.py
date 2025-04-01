@@ -9,11 +9,11 @@ import os
 
 BSS.setVerbose = True
 
+
 def reparam(
     main_dir,
     lig_name,
 ):
-    
     sys_file_path = f"{main_dir}/prep/{lig_name}_sys_equil_solv"
     lig_file_path = f"{main_dir}/prep/{lig_name}_lig_equil_solv"
     if os.path.exists(f"{sys_file_path}.prm7"):
@@ -37,9 +37,10 @@ def reparam(
         # paramaterise the ligand
         print(f"Parameterising {lig_name}...")
         lig_p = ligprep.lig_paramaterise(
-            ligand, validate.lig_ff("sage"))  # openff_unconstrained-2.0.0
+            ligand, validate.lig_ff("sage")
+        )  # openff_unconstrained-2.0.0
         print(validate.lig_ff("sage"))
-        
+
         system_sol.removeMolecules(ligand)
         sys_reparam = lig_p + system_sol
 
@@ -53,8 +54,8 @@ def reparam(
 
         print(f"Done for {lig_name}.")
 
-def main():
 
+def main():
     reparam(sys.argv[1], sys.argv[2])
 
 

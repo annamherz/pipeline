@@ -2258,33 +2258,6 @@ class analysis_network:
 
         self.fwf_graph = {}
 
-    def _get_exp_fwf(self) -> tuple:
-        """get experimental values using freenergworkflows
-
-        Returns:
-            tuple: (exp_lig_dict, exp_pert_dict)
-        """
-        if not self._fwf_path:
-            raise ValueError(
-                "need fwf path added using _add_fwf_path(fwf_path)")
-        import experiments
-
-        # first need to convert the yml file into one useable by freenergworkflows
-        exp_file_dat = f"{self.exp_file.split('.')[0]}_exp_dat.dat"
-        convert.yml_into_freenrgworkflows(self.exp_file, exp_file_dat)
-        experiments = experiments.ExperimentalData()
-        experiments.compute_affinities(
-            exp_file_dat, data_type="IC50", comments="#", delimiter=","
-        )
-        experimental_DGs = experiments.freeEnergiesInKcal
-
-        exp_lig_dict, exp_pert_dict = make_dict.experimental_from_freenrgworkflows(
-            experimental_DGs, self.ligands, self.perturbations
-        )
-        self._fwf_experimental_DGs = experimental_DGs
-
-        return exp_lig_dict, exp_pert_dict
-
     def _get_ana_fwf(self, engine: str = None, use_repeat_files=True) -> dict:
         """get freenrg values using freenergworkflows
 
@@ -2407,56 +2380,6 @@ class analysis_network:
         self._fwf_computed_DGs.update({engine: computed_relative_DGs})
 
         return freenrg_dict
-    
-    # # old function using the fwf stats method
-    # def _get_stats_fwf(self, engine: str = None) -> tuple:
-    #     """get stats using freenergworkflows for the ligands. Perturbations would be the same as the default perturbations.
-
-    #     Args:
-    #         engine (str): name of engine. Defaults to None.
-
-    #     Raises:
-    #         ValueError: need an engine
-
-    #     Returns:
-    #         tuple: r_confidence, tau_confidence, mue_confidence
-    #     """
-    #     # using freenergworkflows
-    #     if not self._fwf_path:
-    #         raise ValueError(
-    #             "need fwf path added using _add_fwf_path(fwf_path)")
-    #     import stats
-
-    #     if not engine:
-    #         raise ValueError("please incl an engine")
-
-    #     # these are the per ligand results
-    #     computed_relative_DGs = self._fwf_computed_DGs[engine]
-    #     self._get_exp_fwf()
-    #     experimental_DGs = self._fwf_experimental_DGs
-
-    #     _stats = stats.freeEnergyStats()
-    #     _stats.generate_statistics(
-    #         computed_relative_DGs, experimental_DGs, repeats=10000
-    #     )
-    #     r_confidence = _stats.R_confidence
-    #     tau_confidence = _stats.tau_confidence
-    #     mue_confidence = _stats.mue_confidence
-    #     logging.info(
-    #         "R confidence is:   %.2f < %.2f < %.2f"
-    #         % (r_confidence[1], r_confidence[0], r_confidence[2])
-    #     )
-    #     logging.info(
-    #         "MUE confidence is: %.2f < %.2f < %.2f"
-    #         % (mue_confidence[1], mue_confidence[0], mue_confidence[2])
-    #     )
-    #     logging.info(
-    #         "Tau confidence is: %.2f < %.2f < %.2f"
-    #         % (tau_confidence[1], tau_confidence[0], tau_confidence[2])
-    #     )
-
-    #     return r_confidence, tau_confidence, mue_confidence
-
 
     def _get_stats_fwf(self, engines: str = None, statistic: str = None,) -> tuple:
         """get stats for the fen analysis for the ligands. Perturbations would be the same as the default perturbations.

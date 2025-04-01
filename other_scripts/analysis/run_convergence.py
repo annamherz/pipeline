@@ -123,9 +123,7 @@ ana_obj = network_dict[network]["plain"]
 ana_obj.check_convergence(compute_missing=True)
 
 # convergence
-ana_obj.compute_convergence(
-    compute_missing=True
-)
+ana_obj.compute_convergence(compute_missing=True)
 
 # mbarnet
 
