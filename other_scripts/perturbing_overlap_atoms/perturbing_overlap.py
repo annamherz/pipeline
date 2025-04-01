@@ -3,14 +3,11 @@
 import sys
 import csv
 import BioSimSpace as BSS
+import os
 
 from argparse import ArgumentParser
 import itertools as it
 
-print("adding code to the pythonpath...")
-code = "/home/anna/Documents/code/python"
-if code not in sys.path:
-    sys.path.insert(1, code)
 import pipeline
 from pipeline.utils import validate
 
@@ -77,7 +74,8 @@ def check_arguments(args):
     if args.output_file:
         file = validate.string(args.output_file)
     else:
-        file = validate.string(f"{main_folder}/perturbing_overlap.dat")
+        validate.folder_path(f"{main_folder}/outputs_extracted/analysis", create=True)
+        file = validate.string(f"{main_folder}/outputs_extracted/analysis/perturbing_overlap.dat")
 
     if args.protocol_file:
         protocol_file = validate.file_path(args.protocol_file)
@@ -149,24 +147,41 @@ def main():
     all_analysis_object.get_experimental()
     pert_dict = all_analysis_object.exper_pert_dict
 
-    with open(file, "w") as f:
-        writer = csv.writer(f)
-        writer.writerow(
-            [
-                "perturbation",
-                "engine",
-                "perturbing_atoms",
-                "percen_overlap_okay",
-                "too_small_avg",
-                "diff_to_exp",
-                "error",
-            ]
-        )
-        for pert, eng in it.product(perts, engs):
-            print(f"running {pert}, {eng}....")
-            folder = f"{mf}/outputs_extracted/{eng}/{pert}"
-            pert_atoms = no_perturbing_atoms(pert, prep)
+    if not os.path.exists(file):
+        with open(file, "w") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    "perturbation",
+                    "engine",
+                    "perturbing_atoms",
+                    "percen_overlap_okay",
+                    "too_small_avg",
+                    "diff_to_exp",
+                    "error",
+                ]
+            )
+
+    with open(file, "r") as readfile:
+        # then, grab all of the data that is already in the file.
+        reader = csv.reader(readfile)
+        data_entries = [(row[0], row[1]) for row in reader]
+
+    print(engs)
+
+    for pert, eng in it.product(perts, engs):
+        print(f"running {pert}, {eng}....")
+        folder = f"{mf}/outputs_extracted/{eng}/{pert}"
+
+        # check if our data entry is not already in the results file. Raise an error if is.
+        if (pert, eng) in data_entries:
+            print(f"{pert} {eng} is already in {file}")
+            pass
+
+        else:
+
             try:
+                pert_atoms = no_perturbing_atoms(pert, prep)
                 ana_obj = pipeline.analysis.analyse(folder, analysis_prot=ana_prot)
                 avg, error, repeats_tuple_list = ana_obj.analyse_all_repeats()
                 percen_okay, too_smalls_avg = ana_obj.check_overlap()
@@ -179,9 +194,12 @@ def main():
                 diff = None
                 err = None
 
-            row = [pert, eng, pert_atoms, percen_okay, too_smalls_avg, diff, err]
-            print(row)
-            writer.writerow(row)
+            with open(file, "a") as f:
+
+                writer = csv.writer(f)
+                row = [pert, eng, pert_atoms, percen_okay, too_smalls_avg, diff, err]
+                print(row)
+                writer.writerow(row)
 
 
 if __name__ == "__main__":

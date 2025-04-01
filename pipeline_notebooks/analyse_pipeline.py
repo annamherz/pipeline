@@ -65,9 +65,9 @@ def analyse_results(main_dir, experimental_file):
     all_analysis_object.plot_histogram_sem(pert_val="pert")
     all_analysis_object.plot_histogram_sem(pert_val="val")
 
-    all_analysis_object.calc_mad_engines(pert_val="pert")
+    # all_analysis_object.calc_mad_engines(pert_val="pert")
     all_analysis_object.calc_mae_engines(pert_val="pert")
-    all_analysis_object.calc_mad_engines(pert_val="val")
+    # all_analysis_object.calc_mad_engines(pert_val="val")
     all_analysis_object.calc_mae_engines(pert_val="val")
 
 

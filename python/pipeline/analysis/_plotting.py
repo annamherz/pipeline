@@ -236,7 +236,6 @@ class plotting_engines:
                 values_dict[eng]["val_results"] = self.calc_val_dict[eng]
                 
                 try:
-                    logging.error("trhing free bound")
                     values_dict[eng]["bound_results"] = self.calc_bound_dict[eng]
                     values_dict[eng]["free_results"] = self.calc_free_dict[eng]
                 except: # if added later there may not be bound and free results
@@ -1018,6 +1017,8 @@ class plotting_engines:
             all_freenrg_values_pre.append(x)
             all_freenrg_values_pre.append(y)
 
+        print(x)
+        print(y)
         all_freenrg_values = []
         for sublist in all_freenrg_values_pre:
             for item in sublist:
@@ -1025,7 +1026,7 @@ class plotting_engines:
 
         min_lim = min(all_freenrg_values)
         max_lim = max(all_freenrg_values)
-
+        print(min_lim, max_lim)
         return min_lim, max_lim
 
     def plot_convergence(self, engines: Optional[str] = None):

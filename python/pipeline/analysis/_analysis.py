@@ -16,14 +16,18 @@ import re
 import pathlib
 import logging
 from statistics import stdev
+import alchemlyb as _alchemlyb
+import shutil
 
 from typing import Union, Optional, Tuple
 from typing import List as _List
 
 from alchemlyb.postprocessors.units import to_kcalmol, to_kJmol, to_kT
 from alchemlyb.visualisation import plot_mbar_overlap_matrix, plot_ti_dhdl
-from alchemlyb.preprocessing import u_nk2series, slicing
+from alchemlyb.visualisation import plot_convergence as _plot_convergence
+from alchemlyb.preprocessing import decorrelate_dhdl, dhdl2series, decorrelate_u_nk, u_nk2series, slicing
 from pymbar.timeseries import detect_equilibration as _detect_equilibration
+from alchemlyb.convergence import fwdrev_cumavg_Rc, A_c, forward_backward_convergence
 
 from ..utils import *
 from ..prep import analysis_protocol
@@ -969,7 +973,7 @@ class analyse:
         self.lower_ci = lower_ci
         self.upper_ci = upper_ci
 
-    def check_convergence(self):
+    def check_repeat_convergence(self):
         """check if the standard deviation of the repeats is less than 1.5 kcal/mol
         """
         # ((f"{str(r)}_repeat", freenrg_val, freenrg_err))
@@ -993,7 +997,52 @@ class analyse:
 
         return standard_deviation_of_vals
 
-    def calculate_convergence(self):
+    def check_convergence(self):
+        """using alchemlyb functions.
+        """
+        converged_percen_dict = {}
+        eq_dict = {}
+        for leg in self._b_folders + self._f_folders:
+            try:
+                files, temperatures, lambdas = self.get_files_temperatures_lambdas(
+                    f"{self._work_dir}/{leg}/prod"
+                )
+
+                u_nk = BSS.FreeEnergy.Relative._get_data(
+                    files, temperatures, self.engine, self.estimator)
+
+                df = forward_backward_convergence(u_nk, self.estimator)
+
+                ac = A_c([u_nk2series(_u_nk) for _u_nk in u_nk], precision=0.01, tol=2)
+                eq_dict[leg] = ac
+
+                # define convergence by checking if forward and backward have the same free energy estimate within error
+                converged_no = 0
+                for row in range(0, len(df)):
+                    # error added 
+                    if abs(df["Forward"][row] - df["Backward"][row]) < [df["Forward_Error"][row] + df["Backward_Error"][row]]:
+                        converged_no += 1
+                converged_percen = converged_no/len(df)
+
+            except Exception as e:
+                logging.error(e)
+                converged_percen = None
+                eq_dict[leg] = None
+
+            converged_percen_dict[leg] = converged_percen
+
+        if self._save_pickle:
+            with open(f"{self._pickle_dir}/converged_percen_dict_{self.pickle_extension}.pickle", "wb") as handle:
+                print(handle)
+                pickle.dump(converged_percen_dict, handle)
+
+            with open(f"{self._pickle_dir}/ac_{self.pickle_extension}.pickle", "wb") as handle:
+                print(handle)
+                pickle.dump(eq_dict, handle)
+
+        return converged_percen_dict
+
+    def calculate_convergence(self, recalculate=False):
         """calculate the convergence for average of the results.
         """
 
@@ -1002,7 +1051,7 @@ class analyse:
         else:
             do_pickle = False
 
-        if not do_pickle:
+        if not do_pickle or recalculate:
             # calculate all the truncated data
             sresults_dict, sbound_dict, sfree_dict = analyse._calculate_truncated(
                 self._work_dir,
@@ -1115,33 +1164,50 @@ class analyse:
                 pickle.dump(self.epert_free_dict, handle)
             logging.info("saved pickles!")
 
-    def plot_convergence(self):
+    def plot_convergence(self, use_alchemlyb=False):
         """plot the convergence.
         """
 
-        try:
-            for from_start, from_end, leg in zip(
-                [self.spert_results_dict, self.spert_bound_dict, self.spert_free_dict],
-                [self.epert_results_dict, self.epert_bound_dict, self.epert_free_dict],
-                ["freenerg", "bound", "free"],
-            ):
-                sdf = analyse.single_pert_dict_into_df(from_start)
-                edf = analyse.single_pert_dict_into_df(from_end)
-                # plot individually for perts
-                logging.info(
-                    f"plotting for {leg}, {self.perturbation}, {self.engine} in {self._graph_dir}..."
-                )
-                analyse.plot_truncated(
-                    sdf,
-                    edf,
-                    file_path=f"{self._graph_dir}/forward_reverse_{leg}_{self.perturbation}_{self.file_extension.split('truncate')[0]}.png",
-                    plot_difference=False,
+        if use_alchemlyb:
+
+            for leg in self._b_folders + self._f_folders:
+                files, temperatures, lambdas = self.get_files_temperatures_lambdas(
+                    f"{self._work_dir}/{leg}/prod"
                 )
 
-        except Exception as e:
-            logging.exception(e)
-            logging.error(
-                "failed to plot convergence, please check Exception message.")
+                u_nk = BSS.FreeEnergy.Relative._get_data(
+                    files, temperatures, self.engine, self.estimator)
+
+                # plot convergence
+                df = forward_backward_convergence(u_nk, self.estimator)
+                ax = _plot_convergence(df)
+                ax.figure.savefig(
+                    f"{self._graph_dir}/forward_reverse_{leg}_{self.perturbation}_{self.file_extension.split('truncate')[0]}_alchemlyb.png")
+
+        else:
+            try:
+                for from_start, from_end, leg in zip(
+                    [self.spert_results_dict, self.spert_bound_dict, self.spert_free_dict],
+                    [self.epert_results_dict, self.epert_bound_dict, self.epert_free_dict],
+                    ["freenerg", "bound", "free"],
+                ):
+                    sdf = analyse.single_pert_dict_into_df(from_start)
+                    edf = analyse.single_pert_dict_into_df(from_end)
+                    # plot individually for perts
+                    logging.info(
+                        f"plotting for {leg}, {self.perturbation}, {self.engine} in {self._graph_dir}..."
+                    )
+                    analyse.plot_truncated(
+                        sdf,
+                        edf,
+                        file_path=f"{self._graph_dir}/forward_reverse_{leg}_{self.perturbation}_{self.file_extension.split('truncate')[0]}.png",
+                        plot_difference=False,
+                    )
+
+            except Exception as e:
+                logging.exception(e)
+                logging.error(
+                    "failed to plot convergence, please check Exception message.")
 
     # not in use
     # def plot_equilibration(self, eq_lines=[], eq_line_labels=[]):
@@ -1432,17 +1498,23 @@ class analyse:
         else:
             dats_folder = self._edgembar_dir
 
+        if overwrite:
+            try_pickle = False
+            for f in os.listdir(dats_folder):
+                try:
+                    os.remove(os.path.join(dats_folder, f))
+                except:
+                    shutil.rmtree(os.path.join(dats_folder, f))
+        else:
+            try_pickle = self._try_pickle
+        save_pickle = self._save_pickle
+        
         for leg in self._b_folders + self._f_folders:
             files, temperatures, lambdas = self.get_files_temperatures_lambdas(
-                f"{self._work_dir}/{leg}"
+                f"{self._work_dir}/{leg}/prod"
             )
 
             u_nk = None
-            if overwrite:
-                try_pickle = False
-            else:
-                try_pickle = self._try_pickle
-            save_pickle = self._save_pickle
             
             # extract u_nk
             if try_pickle:
@@ -1712,7 +1784,7 @@ class analyse:
         for leg in self._b_folders + self._f_folders:
             try:
                 files, temperatures, lambdas = self.get_files_temperatures_lambdas(
-                    f"{self._work_dir}/{leg}"
+                    f"{self._work_dir}/{leg}/prod"
                 )
             except:
                 logging.error(
@@ -1750,6 +1822,76 @@ class analyse:
 
         return eq_dict
 
+
+    def check_Ac(self):
+        """
+        Generate the ensemble convergence criteria Ac for a set of simulations. For each leg, average.
+        1 is equilibrated, 0 is not.
+        """
+
+        # from the docs, can compute for just one window
+        # from the ref, can plot as a cdf
+        # u_nk = BSS.FreeEnergy.Relative._get_data(
+        #     files, temperatures, ana_obj.engine, ana_obj.estimator)
+        # Rc_list = []
+        # for i,_u_nk in enumerate(u_nk):
+        #     # decorrelated = decorrelate_dhdl(_dhdl, remove_burnin=True)
+        #     R_c, running_average = fwdrev_cumavg_Rc(u_nk2series(_u_nk), tol=2)
+        #     Rc_list.append(R_c)
+
+        #     # ax = plot_convergence(running_average, final_error=2)
+        #     # ax.set_ylabel("$\partial H/\partial\lambda$ (in kT)")
+
+        # Rc_lambda = np.array(Rc_list)
+        # print(Rc_lambda)
+
+        # Rc_lambda_sorted = Rc_lambda # np.sort(Rc_lambda)
+
+        # # Compute CDF values
+        # cdf = np.arange(1, len(Rc_lambda_sorted) + 1) / len(Rc_lambda_sorted)
+
+        # plt.figure(figsize=(8, 5))
+        # plt.plot(Rc_lambda_sorted, cdf, marker='o', linestyle='-',
+        #          color='b', label=r'$P(R_c(\lambda) < R_c)$')
+        # plt.xlabel(r'$R_c$')
+        # plt.ylabel('Cumulative Probability')
+        # plt.title('Cumulative Distribution Function')
+        # plt.legend()
+        # plt.grid()
+        # plt.show()
+
+        eq_dict = {}
+
+        for leg in self._b_folders + self._f_folders:
+            try:
+                files, temperatures, lambdas = self.get_files_temperatures_lambdas(
+                    f"{self._work_dir}/{leg}/prod"
+                )
+            except:
+                logging.error(
+                    f"could not extract files and temperatures for {self.perturbation}, {self.engine}, {leg} for get Ac.")
+
+            try:
+                # extract u_nk
+                u_nk = BSS.FreeEnergy.Relative._get_u_nk(files, temperatures, self.engine)
+
+                ac = A_c([u_nk2series(_u_nk) for _u_nk in u_nk], precision=0.01, tol=2)
+                eq_dict[leg] = ac
+
+            except:
+                logging.error(
+                    f"could not get Ac for {self.perturbation}, {self.engine}, {leg}")
+                eq_dict[leg] = None
+            
+            logging.info(
+                f"Ac for {leg} was {ac}")
+
+        with open(f"{self._pickle_dir}/ac_{self.pickle_extension}.pickle", "wb") as handle:
+            print(handle)
+            pickle.dump(eq_dict, handle)
+
+        return eq_dict
+    
     @staticmethod
     def _get_eq_time(df):
 

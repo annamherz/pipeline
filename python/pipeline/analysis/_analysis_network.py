@@ -22,7 +22,8 @@ from ..prep import *
 
 from typing import Union, Optional
 
-from cinnabar import wrangle, plotting, stats
+from cinnabar import wrangle as _wrangle
+from cinnabar import plotting, stats
 
 from math import isnan
 
@@ -73,7 +74,7 @@ class analysis_network:
             self._methods_dict[engine] = self.method
 
         if not exp_file:
-            logging.error(
+            logging.critical(
                 "please set an experimental yml/csv file so this can be used, eg using .get_experimental(exp_file). "
             )
             self.exp_file = None
@@ -174,6 +175,15 @@ class analysis_network:
         self._is_computed_dicts = False
 
         self._set_dictionary_outputs()
+
+        try:
+            # compute the experimental for perturbations
+            self._get_experimental()  # get experimental val dict and normalised dict
+        except Exception as e:
+            logging.critical(e)
+            logging.critical(
+                "unable to compute experimental file. This is likely to cause issues later. Please reset  eg using .get_experimental(exp_file) ")
+
 
     def _get_results_repeat_files(self, leg: Optional[str] = None) -> dict:
         """get the files of all the repeats for a specific leg. Used during init to set free and bound repeat files.
@@ -319,9 +329,11 @@ class analysis_network:
         self.epert_results_dict = {}
         self.epert_bound_dict = {}
         self.epert_free_dict = {}
+        self.convergence_dict = {}
 
         # for auto eq detection
         self.eq_times_dict = {}
+        self.ac_dict = {}
 
         # storing the nx digraphs, per engine
         self._cinnabar_networks = {}
@@ -373,6 +385,7 @@ class analysis_network:
                 logging.error(
                     "need an experimental file to proceed with most of the calculations. please set using self.get_experimental(file)"
                 )
+                return
             else:
                 exp_file = self.exp_file
 
@@ -395,6 +408,9 @@ class analysis_network:
         """get the experimental value dictionaries from a given yml file."""
 
         exp_file = self.exp_file
+
+        if not exp_file:
+            return
 
         if exp_file.split(".")[-1] == "yml":
             try:
@@ -613,7 +629,7 @@ class analysis_network:
         for engine in engines:
             self._compute_cycle_closures(engine)
             print(
-                f"cycle closure average is {self.cycle_dict[engine][1]} +/- {self.cycle_dict[engine][2]} kcal/mol (95% CI: {self.cycle_dict[engine][3]})"
+                f"cycle closure average for {engine} is {self.cycle_dict[engine][1]} +/- {self.cycle_dict[engine][2]} kcal/mol (95% CI: {self.cycle_dict[engine][3]})"
             )
 
     def _compute_cycle_closures(self, engine: str):
@@ -641,9 +657,11 @@ class analysis_network:
 
     def _compute_dicts(self):
         """calculate the perturbation dicts from the previously passed repeat files."""
-
-        # compute the experimental for perturbations
-        self._get_experimental()  # get experimental val dict and normalised dict
+        
+        # reset so if this reruns there are not multiple entries
+        self.calc_repeat_free_dict = {}
+        self.calc_repeat_bound_dict = {}
+        self.calc_repeat_pert_dict = {}
 
         # for self plotting of per pert
         for engine in (
@@ -771,22 +789,27 @@ class analysis_network:
                 if lig_1 not in keep_ligs:
                     keep_ligs.append(lig_1)
 
-        # check remaining perts to see if connected
+        # # check remaining perts to see if connected
+        # print(keep_ligs)
+        # print(keep_perts)
         graph = network_graph(
             keep_ligs,
             keep_perts,
         )
-        if nx.is_connected(graph.graph):
-            pass
-        else:
-            logging.error(
-                "the graph is not connected. some perturbations failed? proceeding w the largest graph for the cinnabar anlysis...")
-            sub_graphs = [graph.graph.subgraph(
-                c).copy() for c in nx.connected_components(graph.graph)]
-            max_graph = sub_graphs[np.argmax([len(sg) for sg in sub_graphs])]
-            keep_ligs = [lig for lig in max_graph.nodes]
-            keep_perts = [f"{node[0]}~{node[1]}" for node in max_graph.edges]
-            logging.error(f"proceeding with {keep_ligs} and {keep_perts}")
+        try:
+            if nx.is_connected(graph.graph):
+                pass
+            else:
+                logging.error(
+                    "the graph is not connected. some perturbations failed? proceeding w the largest graph for the cinnabar anlysis...")
+                sub_graphs = [graph.graph.subgraph(
+                    c).copy() for c in nx.connected_components(graph.graph)]
+                max_graph = sub_graphs[np.argmax([len(sg) for sg in sub_graphs])]
+                keep_ligs = [lig for lig in max_graph.nodes]
+                keep_perts = [f"{node[0]}~{node[1]}" for node in max_graph.edges]
+                logging.error(f"proceeding with {keep_ligs} and {keep_perts}")
+        except Exception as e:
+            logging.critical(e)
 
         # get the files into cinnabar format for analysis
         cinnabar_file_name = (
@@ -811,7 +834,7 @@ class analysis_network:
         try:
             #TODO so not issue if there are intermediates
             # compute the per ligand for the network
-            network = wrangle.FEMap(f"{cinnabar_file_name}.csv")
+            network = _wrangle.FEMap(f"{cinnabar_file_name}.csv")
             self._cinnabar_networks.update({engine: network})
 
             # from cinnabar graph
@@ -973,6 +996,150 @@ class analysis_network:
         self._initialise_plotting_object(check=False)
         self._initialise_stats_object(check=False)
 
+    def check_convergence(self, compute_missing: bool = False):
+        """check the convergence of the results. This is only for the method set when the object was initialised.
+
+        Args:
+            compute_missing (bool, optional): Compute the missing convergence results. This can take awhile! Defaults to False.
+        """
+
+        compute_missing = validate.boolean(compute_missing)
+
+        for engine in self.engines:
+            self.convergence_dict[engine] = {}
+
+            for pert in self._perturbations_dict[engine]:
+                converged_percen_dict = None
+                # find correct path, use extracted if it exists
+                if self.method:
+                    name = f"_{self.method}"
+                else:
+                    name = ""
+                path_to_dir = f"{self.output_folder}/{engine}/{pert}{name}/pickle"
+
+                try:
+                    validate.folder_path(path_to_dir)
+                except:
+                    logging.error(
+                        f"cannot find pickle directory for {pert} in {engine}, does '{path_to_dir}' exist?"
+                    )
+                    path_to_dir = None
+
+                try:
+                    pickle_ext = analyse.pickle_ext(
+                        self.analysis_options.dictionary(), pert, engine
+                    )
+
+                    with open(
+                        f"{path_to_dir}/converged_percen_dict_{pickle_ext}.pickle",
+                        "rb",
+                    ) as file:
+                        converged_percen_dict = pickle.load(file)
+
+                    pickle_loaded = True
+
+                except:
+                    logging.error(
+                        f"could not load pickles for {pert} in {engine}. Was it checked for convergence?"
+                    )
+
+                    pickle_loaded = False
+
+                if compute_missing and not pickle_loaded:
+                    path_to_dir = f"{self.output_folder}/{engine}/{pert}{name}"
+                    try:
+                        validate.folder_path(path_to_dir)
+                    except:
+                        path_to_dir = None
+                        logging.error(
+                            f"{engine} {pert}{name} does not exist in the searched output locations."
+                        )
+                        continue
+
+                    analysed_pert = analyse(
+                        path_to_dir, pert=pert, analysis_prot=self.analysis_options
+                    )
+                    analysed_pert._save_pickle = True
+
+                    logging.info(
+                        f"Checking convergence for {engine} {pert}{name} ..."
+                    )
+                    converged_percen_dict = analysed_pert.check_convergence()
+
+                self.convergence_dict[engine][pert] = converged_percen_dict
+
+    def check_Ac(self, compute_missing: bool = False):
+        """check the Ac equilibration of the results. This is only for the method set when the object was initialised.
+
+        Args:
+            compute_missing (bool, optional): Compute the missing convergence results. This can take awhile! Defaults to False.
+        """
+
+        compute_missing = validate.boolean(compute_missing)
+
+        for engine in self.engines:
+            self.ac_dict[engine] = {}
+
+            for pert in self._perturbations_dict[engine]:
+                # find correct path, use extracted if it exists
+                if self.method:
+                    name = f"_{self.method}"
+                else:
+                    name = ""
+                path_to_dir = f"{self.output_folder}/{engine}/{pert}{name}/pickle"
+                try:
+                    validate.folder_path(path_to_dir)
+                except:
+                    logging.error(
+                        f"cannot find pickle directory for {pert} in {engine}, does '{path_to_dir}' exist?"
+                    )
+                    path_to_dir = None
+
+                try:
+                    pickle_ext = analyse.pickle_ext(
+                        self.analysis_options.dictionary(), pert, engine
+                    )
+
+                    with open(
+                        f"{path_to_dir}/ac_{pickle_ext}.pickle",
+                        "rb",
+                    ) as file:
+                        eq_dict = pickle.load(file)
+
+                    pickle_loaded = True
+
+                except:
+                    logging.error(
+                        f"could not load pickles for {pert} in {engine}. Was it checked for Ac?"
+                    )
+
+                    pickle_loaded = False
+                    eq_dict = None
+
+                if compute_missing and not pickle_loaded:
+                    path_to_dir = f"{self.output_folder}/{engine}/{pert}{name}"
+                    try:
+                        validate.folder_path(path_to_dir)
+                    except:
+                        path_to_dir = None
+                        logging.error(
+                            f"{engine} {pert}{name} does not exist in the searched output locations."
+                        )
+                        continue
+
+                    analysed_pert = analyse(
+                        path_to_dir, pert=pert, analysis_prot=self.analysis_options
+                    )
+                    analysed_pert._save_pickle = True
+
+                    logging.info(
+                        f"Checking convergence for {engine} {pert}{name} ..."
+                    )
+                    eq_dict = analysed_pert.check_Ac()
+
+                self.ac_dict[engine][pert] = eq_dict
+
+
     def compute_convergence(self, compute_missing: bool = False):
         """compute the convergence of the results. This is only for the method set when the object was initialised.
 
@@ -1114,7 +1281,7 @@ class analysis_network:
                     self.epert_bound_dict[engine][pert] = ebound_dict
                     self.epert_free_dict[engine][pert] = efree_dict
 
-    def compute_equilibration_times(self, compute_missing: bool = False):
+    def compute_equilibration_times(self, compute_missing: bool = False, recompute:bool = False):
         """compute the convergence of the results. This is only for the method set when the object was initialised.
 
         Args:
@@ -1122,6 +1289,7 @@ class analysis_network:
         """
 
         compute_missing = validate.boolean(compute_missing)
+        recompute = validate.boolean(recompute)
 
         for engine in self.engines:
             self.eq_times_dict[engine] = {}
@@ -1160,7 +1328,26 @@ class analysis_network:
 
                     pickle_loaded = False
 
-                if compute_missing and not pickle_loaded:
+                if pickle_loaded:
+                    try:
+                        if eq_times["bound_0"]["mean"] is None:
+                            if eq_times["free_0"]["mean"] is None:
+                                with open(
+                                    f"{path_to_dir}/eq_times_{pert}_{engine}_MBAR_alchemlyb_None_eqfalse_statsfalse_truncate0_100.pickle", "rb"
+                                ) as file:
+                                    eq_times = pickle.load(file)
+
+                                pickle_loaded = True 
+                            
+                    except:
+                        with open(
+                            f"{path_to_dir}/eq_times_{pert}_{engine}_MBAR_alchemlyb_None_eqfalse_statsfalse_truncate0_100.pickle", "rb"
+                        ) as file:
+                            eq_times = pickle.load(file)
+
+                        pickle_loaded = True 
+                        
+                if compute_missing and not pickle_loaded or recompute:
                     path_to_dir = f"{self.output_folder}/{engine}/{pert}{name}"
                     try:
                         validate.folder_path(path_to_dir)
@@ -1288,6 +1475,22 @@ class analysis_network:
         )
         for pert in pert_list:
             graph.draw_perturbation(pert)
+
+    def draw_ligands(self, lig_list):
+        """Draw the disconnected ligands.
+
+        Args:
+            engine (str): The MD engine.
+        """
+
+        ligands = validate.is_list(lig_list)
+        graph = network_graph(
+            self.ligands,
+            self.perturbations,
+            ligands_folder=self.ligands_folder,
+        )
+        for lig in ligands:
+            graph.draw_ligand(lig)
 
     def disconnected_ligands(self, engine: str) -> list:
         """Get the disconnected ligands.
@@ -1499,6 +1702,8 @@ class analysis_network:
         use_cinnabar: bool = False,
         engines: Optional[list] = None,
         successful_perturbations: bool = True,
+        use_values: bool = True,
+        **kwargs
     ):
         """draw the network graph.
 
@@ -1508,6 +1713,8 @@ class analysis_network:
             successful_perturbations (bool): whether to only draw the successful runs. Only useable if cinnabar is set to False. Defaults to True.
         """
 
+        use_values = validate.boolean(use_values)
+        
         if engines:
             engines = self._validate_in_names_list(engines, make_list=True)
         else:
@@ -1533,21 +1740,21 @@ class analysis_network:
                     graph = network_graph(
                         self.ligands,
                         perturbations,
-                        self.calc_pert_dict[engine],
+                        self.calc_pert_dict[engine] if use_values else None,
                         file_dir=file_dir,
                         ligands_folder=self.ligands_folder,
                     )
-                    graph.draw_graph(title=engine)
+                    graph.draw_graph(title=engine, **kwargs)
             else:
                 for engine in engines:
                     graph = network_graph(
                         self._ligands_dict[engine],
                         self._perturbations_dict[engine],
-                        self.calc_pert_dict[engine],
+                        self.calc_pert_dict[engine] if use_values else None,
                         file_dir=file_dir,
                         ligands_folder=self.ligands_folder,
                     )
-                    graph.draw_graph(title=engine)
+                    graph.draw_graph(title=engine, **kwargs)
 
     def _initialise_plotting_object(self, check: bool = False):
         """intialise the plotting object
@@ -2252,7 +2459,7 @@ class analysis_network:
 
 
     def _get_stats_fwf(self, engines: str = None, statistic: str = None,) -> tuple:
-        """get stats for the mbarnet analysis for the ligands. Perturbations would be the same as the default perturbations.
+        """get stats for the fen analysis for the ligands. Perturbations would be the same as the default perturbations.
 
         Args:
             engine (str): name of engine. Defaults to None.
@@ -2503,6 +2710,21 @@ class analysis_network:
 
         return df, df_err, df_ci
 
+    def check_html_exists(self, engines: Optional[list] = None):
+
+        for engine in engines:
+            xml_folder = validate.folder_path(
+                f"{self.results_folder}/edgembar/{engine}/xml_py_files_{analyse.file_ext(self.analysis_options)}")
+
+            # adapted from writegraphhtml
+            html_list = glob.glob(f"{xml_folder}/*.html")
+            html_perts = [f.split('/')[-1].split('.')[0] for f in html_list]
+            
+            for pert in self._perturbations_dict[engine]:
+                if pert not in html_perts:
+                    logging.error(f"{pert} not found in html files for {engine}")
+
+
     # edgembar
     def analyse_mbarnet(self, compute_missing: bool=False, use_experimental: bool=False,
                         write_xml: bool=True, run_xml_py: bool=True, engines: Optional[list]=None, 
@@ -2514,7 +2736,7 @@ class analysis_network:
             compute_missing (bool, optional): run analysis to obtain edgembar folder for perturbations. Defaults to False.
             use_experimental (bool, optional): Use experimental values with the solver. Defaults to False.
             write_xml (bool, optional): write the xml files. Defaults to True.
-            run_xml_py (bool, optional): write the python filed. Defaults to True.
+            run_xml_py (bool, optional): write the python files. Defaults to True.
             engines (Optional[list], optional): Engines to analyse for. Defaults to None.
             overwrite (bool, optional): overwrite existing files, reanalyse. Defaults to False.
             solver (str, optional): mbarnet solver: linear/nonlinear/mixed. Defaults to "linear".
@@ -2631,7 +2853,7 @@ class analysis_network:
                      
            # adapted from writegraphhtml
             html_list = glob.glob(f"{xml_folder}/*.html")
-            html_perts = [file.split('/')[-1].split('.')[0] for f in html_list]
+            html_perts = [f.split('/')[-1].split('.')[0] for f in html_list]
             logging.info(f"html perts are {html_perts}")
 
             py_list = glob.glob(f"{xml_folder}/*.py")
@@ -2652,7 +2874,7 @@ class analysis_network:
                             exclude=None,
                             refnode=refnode,
                             # ana_obj= self,
-                            engine=engine,
+                            # engine=engine,
                             )
             g.Read()
 
@@ -2993,3 +3215,29 @@ class analysis_network:
 
     # def check_equilibrated_ttest(self):
     #     pass
+
+
+    def _check_number_repeat_results(self, engine, leg="repeat"):
+        # leg can also be free or bound
+
+        engine = validate.engine(engine)
+
+        if leg.lower() == "repeat":
+            repeat_dict = self.calc_repeat_pert_dict[engine]
+        elif leg.lower() == "free":
+            repeat_dict = self.calc_repeat_free_dict[engine]
+        elif leg.lower() == "bound":
+            repeat_dict = self.calc_repeat_bound_dict[engine]
+
+        no_repeats_dict = {}
+
+        for rep in range(0, len(repeat_dict)):
+            for pert in repeat_dict[rep]:
+                if pert in no_repeats_dict:
+                    if str(repeat_dict[rep][pert][0]) != "nan":
+                        no_repeats_dict[pert] += 1
+                else:
+                    if str(repeat_dict[rep][pert][0]) != "nan":
+                        no_repeats_dict[pert] = 1
+        
+        return no_repeats_dict

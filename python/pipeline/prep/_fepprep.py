@@ -39,7 +39,7 @@ def check_hmr(
     if protocol.hmr():
         # Set the expected HMR factor.
         hmr_factor = protocol.hmr_factor()
-        
+
         if engine == "AMBER" or engine == "GROMACS":
             if hmr_factor == "auto":
                 hmr_factor = 3
@@ -346,18 +346,18 @@ class fepprep:
                 restart_interval=restart_interval,
             )
 
-        if protocol.engine() == "GROMACS":
-            logging.info("using no heating for gromacs")
-            heat_protocol = BSS.Protocol.FreeEnergyEquilibration(
-                timestep=eq_timestep * protocol.timestep_unit(),
-                num_lam=protocol.num_lambda(),
-                runtime=protocol.eq_runtime() * protocol.eq_runtime_unit(),
-                pressure=None,
-                temperature=protocol.temperature() * protocol.temperature_unit(),
-                restart_interval=restart_interval,
-                # restraint="heavy",
-                thermostat_time_constant=thermostat_time_constant,
-            )
+        # if protocol.engine() == "GROMACS":
+        #     logging.info("using no heating for gromacs")
+        #     heat_protocol = BSS.Protocol.FreeEnergyEquilibration(
+        #         timestep=protocol.eq_timestep() * protocol.timestep_unit(),
+        #         num_lam=protocol.num_lambda(),
+        #         runtime=protocol.eq_runtime() * protocol.eq_runtime_unit(),
+        #         pressure=None,
+        #         temperature=protocol.temperature() * protocol.temperature_unit(),
+        #         restart_interval=restart_interval,
+        #         # restraint="heavy",
+        #         thermostat_time_constant=thermostat_time_constant,
+        #     )
 
         # set the new protocols to self as well
         self._min_protocol = min_protocol
@@ -456,6 +456,9 @@ class fepprep:
                             "gti_vdw_exp": 2,  # default value is 6
                             "cut": "10.0",
                             "iwrap": 0,
+                            "gti_bat_sc": 0,
+                            "tishake": 0,
+                            # "gti_syn_mass": 3,
                         }
                     else:
                         amber_dict = {}
@@ -464,7 +467,7 @@ class fepprep:
                     eq_extra_options = amber_dict.copy()
                     prod_extra_options = amber_dict.copy()
                     prod_extra_options["iwrap"] = 1
-                    eq_extra_options["barostat"] = 2  
+                    eq_extra_options["barostat"] = 2
 
                 for key, value in protocol.config_options()["all"].items():
                     min_extra_options[key] = value
@@ -487,7 +490,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/min",
                     extra_options=min_extra_options,
                     ignore_warnings=True,
-                    explicit_dummies=True,  # set True for AMBER, does not affect the other engines
+                    explicit_dummies=False, # only applied to AMBER runs
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -497,7 +500,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/heat",
                     extra_options=heat_extra_options,
                     ignore_warnings=True,
-                    explicit_dummies=True,  # set True for AMBER, does not affect the other engines
+                    explicit_dummies=False,
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -507,7 +510,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/eq",
                     extra_options=eq_extra_options,
                     ignore_warnings=True,
-                    explicit_dummies=True,  # set True for AMBER, does not affect the other engines
+                    explicit_dummies=False,
                 )
 
                 BSS.FreeEnergy.Relative(
@@ -517,7 +520,7 @@ class fepprep:
                     work_dir=f"{work_dir}/{leg}_{rep}/prod",
                     extra_options=prod_extra_options,
                     ignore_warnings=True,
-                    explicit_dummies=True,  # set True for AMBER, does not affect the other engines
+                    explicit_dummies=False,
                 )
 
         if protocol.engine() == "SOMD":
@@ -535,7 +538,7 @@ class fepprep:
                                       "cutoff distance": "12 angstrom",
                                       }
 
-                # hmr factor 
+                # hmr factor
                 if protocol.hmr():
                     if protocol.hmr_factor() == "auto":
                         eq_extra_options["hydrogen mass repartitioning factor"] = "1.5"
@@ -611,8 +614,8 @@ class fepprep:
                 if self._pipeline_protocol.engine() == "AMBER":
                     kwarg_dict["PRUNECROSSINGCONSTRAINTS"] = True
 
-            if self._pipeline_protocol.engine() == "AMBER":
-                kwarg_dict["PRUNEATOMTYPES"] = True
+        if self._pipeline_protocol.engine() == "AMBER":
+            kwarg_dict["PRUNEATOMTYPES"] = True
 
         # any pipeline kwargs overwrite this
         for key, value in self._pipeline_protocol.kwargs().items():

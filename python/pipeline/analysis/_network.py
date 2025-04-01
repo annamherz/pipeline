@@ -134,14 +134,13 @@ class network_graph:
                         graph.number_of_nodes())# * 2)
 
             fig, ax = plt.subplots(
-                figsize=figsize, dpi=30*(math.ceil(graph.number_of_nodes()/100))
+                figsize=figsize, dpi=100*(math.ceil(graph.number_of_nodes()/100))
             )
 
             if self.calc_pert_dict:
                 cmap_col = plt.cm.magma
                 edge_colours = [graph[u][v]["error"] for u, v in graph.edges]
-                edges, weights = zip(
-                    *nx.get_edge_attributes(graph, "error").items())
+                edges, weights = zip(*nx.get_edge_attributes(graph, "error").items())
                 if edge_labels:
                     draw_edge_labels = True
                 else:
@@ -158,17 +157,16 @@ class network_graph:
                 edge_cmap=cmap_col,
                 width=1,
                 linewidths=1,
-                node_size=2100,
+                node_size=15000,
                 node_color="navy",
                 font_size=15,
-                labels={node: node for node in graph.nodes()},
+                labels={node: node.split("lig_CHEMBL")[-1] for node in graph.nodes()},
                 font_color="white",
             )
             if draw_edge_labels:
                 nx.draw_networkx_edge_labels(
                     graph, pos,
-                    edge_labels={(u, v): format(
-                        graph[u][v]['value'], ".2f") for u, v in graph.edges},
+                    edge_labels={(u, v): format(graph[u][v]['value'], ".2f") for u, v in graph.edges},
                     font_color='navy',
                     font_size=16,
                     label_pos=0.45
@@ -197,8 +195,7 @@ class network_graph:
                 xa, ya = trans2((xx, yy))  # axes coordinates
                 a = plt.axes([xa - p2, ya - p2, piesize, piesize])
                 a.set_aspect("equal")
-                a.imshow(ImageOps.expand(
-                    graph.nodes[n]["image"], border=2, fill="black"))
+                a.imshow(ImageOps.expand(graph.nodes[n]["image"], border=2, fill="black"))
                 a.set_title(f"{n}", y=0.85)
                 a.axis("off")
 

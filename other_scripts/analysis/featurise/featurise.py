@@ -6,10 +6,6 @@ import os
 import sys
 from argparse import ArgumentParser
 
-print("adding code to the pythonpath...")
-code = "/home/anna/Documents/code/python"
-if code not in sys.path:
-    sys.path.insert(1, code)
 import pipeline
 
 from pipeline.prep import *
@@ -31,7 +27,7 @@ def check_arguments(args):
     else:
         ligands_folder = str(
             input(
-                "what is the ligands folder where the ligand files from the nework are?: "
+                "what is the ligands folder where the ligand files from the network are?: "
             )
         ).strip()
 

@@ -40,7 +40,10 @@ class convert:
         exp_file_dat = validate.string(exp_file_dat)
 
         # assume the temperature is 300
-        exper_raw_dict = convert._yml_into_exper_raw_dict(exp_file, 300, "IC50")
+        try:
+            exper_raw_dict = convert._yml_into_exper_raw_dict(exp_file, 300, "IC50")
+        except:
+            exper_raw_dict = convert._read_yml_kcal(exp_file)
 
         with open(exp_file_dat, "w") as file:
             writer = csv.writer(file, delimiter=",")

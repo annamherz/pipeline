@@ -688,7 +688,7 @@ class pipeline_protocol(protocol):
             try:
                 value = self._start_temperature
             except:
-                # if it is the default start temperature, it is zero
+                # if it is the default start temperature, it is ten
                 value = int(10)
                 self._start_temperature = value
 

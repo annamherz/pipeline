@@ -12,7 +12,7 @@ import logging
 BSS.setVerbose = True
 
 
-def run_all_analysis_methods(work_dir, pert, engine, final_results_folder=None):
+def run_all_analysis_methods(work_dir, pert, engine, final_results_folder=None, analysis_options_name=None):
     """analyses all the iterations of estimators (TI, MBAR) and stats ineff and auto eq
       along with different truncated percentages, as it calculates the convergence.
     """
@@ -70,6 +70,7 @@ def run_all_analysis_methods(work_dir, pert, engine, final_results_folder=None):
         for ana_option in analysis_options:
 
             ana_option = analysis_protocol(ana_option, auto_validate=True)
+            ana_option.name(analysis_options_name)
 
             logging.info(f"analysing results for {work_dir}")
             logging.info(f"using {ana_option.print_protocol()} for analysis")
@@ -116,12 +117,14 @@ def run_all_analysis_methods(work_dir, pert, engine, final_results_folder=None):
             #     logging.info(f"autoequilibration times were {start_idxs}")
 
 
-def analysis_work_dir(work_dir, pert, engine, ana_file, final_results_folder):
+def analysis_work_dir(work_dir, pert, engine, analysis_options, final_results_folder, analysis_options_name):
 
-    if ana_file:
-        analysis_options = analysis_protocol(ana_file, auto_validate=True)
+    if analysis_options:
+        analysis_options = analysis_protocol(analysis_options, auto_validate=True)
     else:
-        analysis_options = None
+        analysis_options = analysis_protocol(auto_validate=True)
+
+    analysis_options.name(analysis_options_name)
 
     analysed_pert = analyse(work_dir, pert, engine, analysis_options)
     avg, error, repeats_tuple_list = analysed_pert.analyse_all_repeats()
@@ -231,18 +234,25 @@ def main():
     pert, engine, ana_file, main_dir, prot_file, work_dir, run_all_methods = check_arguments(
         args)
 
-    if not work_dir:
+    if prot_file:
+        # instantiate the protocol as an object
+        protocol = pipeline_protocol(prot_file, auto_validate=True)
+        analysis_options_name = protocol.name()
+    else:
+        analysis_options_name = None
+    
+    if ana_file:
         # options
         analysis_options = analysis_protocol(ana_file, auto_validate=True)
+    else:
+        analysis_options = None
+
+    if not work_dir:
         pert_name = None
 
-        if prot_file:
-            # instantiate the protocol as an object
-            protocol = pipeline_protocol(prot_file, auto_validate=True)
-
-            if protocol.name():
-                pert_name = f"{pert}_{protocol.name()}"
-                analysis_options.name(protocol.name())
+        if analysis_options_name:
+            pert_name = f"{pert}_{protocol.name()}"
+            analysis_options.name(protocol.name())
 
         if not pert_name:
             pert_name = pert
@@ -266,10 +276,10 @@ def main():
     if run_all_methods:
         # analyse all methods
         logging.info("running analysis for all methods...")
-        run_all_analysis_methods(work_dir, pert, engine, final_results_folder)
+        run_all_analysis_methods(work_dir, pert, engine, final_results_folder, analysis_options_name)
     else:
         analysis_work_dir(work_dir, pert, engine,
-                          ana_file, final_results_folder)
+                          analysis_options, final_results_folder, analysis_options_name)
 
 
 if __name__ == "__main__":

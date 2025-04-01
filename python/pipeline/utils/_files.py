@@ -32,6 +32,37 @@ def write_vals_file(
             writer.writerow([key, value[0], value[1], eng, analysis_string, method])
 
 
+def write_perts_file(
+    val_dict,
+    file_path: str,
+    eng: Optional[str] = None,
+    analysis_string: Optional[str] = None,
+    method: Optional[str] = None,
+):
+    val_dict = validate.dictionary(val_dict)
+
+    if not method:
+        method = "None"
+
+    with open(f"{file_path}.csv", "w") as file:
+        writer = csv.writer(file)
+        writer.writerow(
+            ["lig_0", "lig_1", "freenrg", "error", "engine", "analysis", "method"]
+        )
+
+        for key, value in val_dict.items():
+            writer.writerow(
+                [
+                    key.split("~")[0],
+                    key.split("~")[1],
+                    value[0],
+                    value[1],
+                    eng,
+                    analysis_string,
+                    method,
+                ]
+            )
+
 def write_analysis_file(analysis, results_dir: str, method=None):
     """write the analysis file for the analysis object
 

@@ -578,13 +578,21 @@ class make_dict:
             normalised_dict = {}
             values = []
             for val in data_dict.values():
-                values.append(float(val[0]))  # incase it is a tuple of vals
+                if isinstance(val, tuple):
+                    if val[0]:
+                        values.append(float(val[0]))
+                else:
+                    if val:
+                        values.append(float(val))
             avg_val = np.mean(values)
             for key in data_dict:
-                normalised_dict.update(
-                    {key: (float(data_dict[key][0]) -
-                           avg_val, data_dict[key][1])}
-                )  # also incl error
+                try:
+                    normalised_dict.update(
+                        {key: (float(data_dict[key][0]) -
+                            avg_val, data_dict[key][1])}
+                    )  # also incl error
+                except:
+                    pass # if there is no value, can't update so skip
 
             return normalised_dict
 
